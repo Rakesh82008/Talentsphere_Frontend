@@ -207,16 +207,16 @@ export default function TrainingsPage() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Trainings', value: stats.totalTrainings, icon: <AcademicCapIcon className="h-5 w-5" />, color: 'text-blue-600 bg-blue-50' },
-            { label: 'Total Enrollments', value: stats.totalEnrollments, icon: <UserGroupIcon className="h-5 w-5" />, color: 'text-purple-600 bg-purple-50' },
-            { label: 'Completed', value: stats.completedEnrollments, icon: <CheckCircleIcon className="h-5 w-5" />, color: 'text-emerald-600 bg-emerald-50' },
-            { label: 'Overdue', value: stats.overdueEnrollments, icon: <ExclamationTriangleIcon className="h-5 w-5" />, color: 'text-red-600 bg-red-50' },
+            { label: 'Total Trainings', value: stats.totalTrainings, icon: <AcademicCapIcon className="h-5 w-5" />, color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' },
+            { label: 'Total Enrollments', value: stats.totalEnrollments, icon: <UserGroupIcon className="h-5 w-5" />, color: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30' },
+            { label: 'Completed', value: stats.completedEnrollments, icon: <CheckCircleIcon className="h-5 w-5" />, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' },
+            { label: 'Overdue', value: stats.overdueEnrollments, icon: <ExclamationTriangleIcon className="h-5 w-5" />, color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30' },
           ].map((s) => (
             <div key={s.label} className="card p-4 flex items-center gap-3">
               <div className={`p-2 rounded-lg ${s.color}`}>{s.icon}</div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-500">{s.label}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{s.label}</p>
               </div>
             </div>
           ))}
@@ -226,10 +226,10 @@ export default function TrainingsPage() {
       {stats && (
         <div className="card p-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-sm font-medium text-gray-700">Overall Completion Rate</span>
-            <span className="text-sm font-bold text-gray-900">{stats.completionRate}%</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Overall Completion Rate</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{stats.completionRate}%</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${stats.completionRate}%` }} />
           </div>
         </div>
@@ -266,30 +266,30 @@ export default function TrainingsPage() {
                 {filtered.map((t) => (
                   <tr key={t.trainingID} className="hover:bg-gray-50">
                     <td className="table-td">
-                      <p className="font-medium text-gray-900">{t.title}</p>
-                      {t.instructorName && <p className="text-xs text-gray-400">👤 {t.instructorName}</p>}
-                      {t.location && <p className="text-xs text-gray-400">📍 {t.location}</p>}
+                      <p className="font-medium text-gray-900 dark:text-slate-100">{t.title}</p>
+                      {t.instructorName && <p className="text-xs text-gray-400 dark:text-slate-500">👤 {t.instructorName}</p>}
+                      {t.location && <p className="text-xs text-gray-400 dark:text-slate-500">📍 {t.location}</p>}
                       {t.trainingLink && (
-                        <a href={t.trainingLink} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline">🔗 Open Link</a>
+                        <a href={t.trainingLink} target="_blank" rel="noreferrer" className="text-xs text-blue-500 dark:text-blue-400 hover:underline">🔗 Open Link</a>
                       )}
                     </td>
                     <td className="table-td">
-                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{t.trainingType}</span>
+                      <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full">{t.trainingType}</span>
                     </td>
-                    <td className="table-td text-gray-600 text-sm">{deliveryModeLabel(t.deliveryMode)}</td>
-                    <td className="table-td text-gray-500 text-xs whitespace-nowrap">
+                    <td className="table-td text-gray-600 dark:text-slate-400 text-sm">{deliveryModeLabel(t.deliveryMode)}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 text-xs whitespace-nowrap">
                       {`${format(new Date(t.startDate), 'MMM d')} – ${format(new Date(t.endDate), 'MMM d, yyyy')}`}
                       {t.classStartTime && t.classEndTime && (
-                        <p className="text-blue-600 font-medium mt-0.5">🕐 {t.classStartTime} – {t.classEndTime}</p>
+                        <p className="text-blue-600 dark:text-blue-400 font-medium mt-0.5">🕐 {t.classStartTime} – {t.classEndTime}</p>
                       )}
                     </td>
-                    <td className="table-td text-gray-500 text-sm">{t.durationDays}d</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 text-sm">{t.durationDays}d</td>
                     <td className="table-td"><StatusBadge status={t.status} /></td>
                     {can('MANAGE_TRAININGS') && (
                       <td className="table-td">
                         <div className="flex gap-2">
-                          <button onClick={() => setEditTraining(t)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                          <button onClick={() => setDeleteId(t.trainingID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                          <button onClick={() => setEditTraining(t)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
+                          <button onClick={() => setDeleteId(t.trainingID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
                         </div>
                       </td>
                     )}

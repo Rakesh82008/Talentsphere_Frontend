@@ -81,15 +81,15 @@ const circleClasses: Record<StepState, string> = {
   passed:   'bg-green-500 ring-2 ring-green-500',
   failed:   'bg-red-500 ring-2 ring-red-500',
   active:   'bg-blue-500 ring-2 ring-blue-500',
-  upcoming: 'bg-white ring-2 ring-gray-200',
+  upcoming: 'bg-white dark:bg-gray-700 ring-2 ring-gray-200 dark:ring-gray-600',
 }
 
 const labelClasses: Record<StepState, string> = {
-  done:     'text-green-700',
-  passed:   'text-green-700',
-  failed:   'text-red-600',
-  active:   'text-blue-700',
-  upcoming: 'text-gray-400',
+  done:     'text-green-700 dark:text-green-400',
+  passed:   'text-green-700 dark:text-green-400',
+  failed:   'text-red-600 dark:text-red-400',
+  active:   'text-blue-700 dark:text-blue-400',
+  upcoming: 'text-gray-400 dark:text-slate-500',
 }
 
 function StepCircle({ state }: { state: StepState }) {
@@ -98,7 +98,7 @@ function StepCircle({ state }: { state: StepState }) {
       {(state === 'done' || state === 'passed') && <CheckIcon className="h-5 w-5 text-white" />}
       {state === 'failed' && <XMarkIcon className="h-5 w-5 text-white" />}
       {state === 'active' && <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />}
-      {state === 'upcoming' && <span className="h-2.5 w-2.5 rounded-full bg-gray-300" />}
+      {state === 'upcoming' && <span className="h-2.5 w-2.5 rounded-full bg-gray-300 dark:bg-gray-500" />}
     </div>
   )
 }
@@ -106,8 +106,8 @@ function StepCircle({ state }: { state: StepState }) {
 function PipelineTracker({ pipeline, applicationStatus }: { pipeline: Pipeline; applicationStatus: ApplicationStatus }) {
   const steps = buildSteps(pipeline, applicationStatus)
   return (
-    <div className="mt-5 pt-4 border-t border-gray-100">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Application Progress</p>
+    <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+      <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-4">Application Progress</p>
       <div className="flex items-start">
         {steps.map((step, i) => (
           <Fragment key={step.label}>
@@ -123,7 +123,7 @@ function PipelineTracker({ pipeline, applicationStatus }: { pipeline: Pipeline; 
             {i < steps.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mt-4 transition-colors duration-300 ${
-                  step.state === 'done' || step.state === 'passed' ? 'bg-green-400' : 'bg-gray-200'
+                  step.state === 'done' || step.state === 'passed' ? 'bg-green-400' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               />
             )}
@@ -133,9 +133,9 @@ function PipelineTracker({ pipeline, applicationStatus }: { pipeline: Pipeline; 
 
       {/* Rejection banner when directly rejected */}
       {applicationStatus === 'Rejected' && !pipeline.selection && (
-        <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-100 px-4 py-3">
+        <div className="mt-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 px-4 py-3">
           <XMarkIcon className="h-4 w-4 text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-700">
+          <p className="text-sm text-red-700 dark:text-red-400">
             Your application was not selected to move forward. Thank you for your interest.
           </p>
         </div>
@@ -143,9 +143,9 @@ function PipelineTracker({ pipeline, applicationStatus }: { pipeline: Pipeline; 
 
       {/* Hired banner */}
       {(applicationStatus === 'Accepted' || pipeline.selection?.decision === 'Selected') && (
-        <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-50 border border-green-100 px-4 py-3">
+        <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 px-4 py-3">
           <CheckIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
-          <p className="text-sm text-green-700 font-medium">
+          <p className="text-sm text-green-700 dark:text-green-400 font-medium">
             Congratulations! You have been selected. HR will be in touch with next steps.
           </p>
         </div>
@@ -236,17 +236,17 @@ export default function MyApplicationsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold text-gray-900 text-base">{a.jobTitle ?? `Job #${a.jobID}`}</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-slate-100 text-base">{a.jobTitle ?? `Job #${a.jobID}`}</h3>
                       <StatusBadge status={a.status} />
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
                       Applied {format(new Date(a.submittedDate || a.createdAt), 'MMMM d, yyyy')}
                     </p>
                   </div>
                   {(a.status === 'Submitted' || a.status === 'Pending') && (
                     <button
                       onClick={() => setDeleteId(a.applicationID)}
-                      className="flex-shrink-0 p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
+                      className="flex-shrink-0 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-400 transition-colors"
                       title="Withdraw application"
                     >
                       <TrashIcon className="h-4 w-4" />
@@ -256,7 +256,7 @@ export default function MyApplicationsPage() {
                 {pipeline ? (
                   <PipelineTracker pipeline={pipeline} applicationStatus={a.status} />
                 ) : (
-                  <div className="mt-4 pt-4 border-t border-gray-100 flex justify-center">
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex justify-center">
                     <LoadingSpinner size="sm" />
                   </div>
                 )}

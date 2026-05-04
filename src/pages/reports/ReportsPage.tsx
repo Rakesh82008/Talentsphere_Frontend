@@ -37,7 +37,7 @@ export default function ReportsPage() {
       {/* ── Hiring Analytics ── */}
       {hiring && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Hiring Analytics</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Hiring Analytics</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
               { label: 'Total Jobs', value: hiring.totalJobs, icon: BriefcaseIcon, color: 'bg-violet-500' },
@@ -50,8 +50,8 @@ export default function ReportsPage() {
                   <s.icon className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                  <p className="text-xs text-gray-500">{s.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{s.label}</p>
                 </div>
               </div>
             ))}
@@ -78,16 +78,16 @@ export default function ReportsPage() {
                       const rate = j.applicationCount > 0 ? Math.round((j.hiredCount / j.applicationCount) * 100) : 0
                       return (
                         <tr key={j.jobID} className="hover:bg-gray-50">
-                          <td className="table-td font-medium text-gray-900">{j.jobTitle}</td>
-                          <td className="table-td text-gray-500">{j.department}</td>
-                          <td className="table-td text-gray-700">{j.applicationCount}</td>
-                          <td className="table-td text-emerald-600 font-medium">{j.hiredCount}</td>
+                          <td className="table-td font-medium text-gray-900 dark:text-slate-100">{j.jobTitle}</td>
+                          <td className="table-td text-gray-500 dark:text-slate-400">{j.department}</td>
+                          <td className="table-td text-gray-700 dark:text-slate-300">{j.applicationCount}</td>
+                          <td className="table-td text-emerald-600 dark:text-emerald-400 font-medium">{j.hiredCount}</td>
                           <td className="table-td">
                             <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                              <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
                                 <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${rate}%` }} />
                               </div>
-                              <span className="text-xs text-gray-600 w-8">{rate}%</span>
+                              <span className="text-xs text-gray-600 dark:text-slate-400 w-8">{rate}%</span>
                             </div>
                           </td>
                         </tr>
@@ -115,8 +115,8 @@ export default function ReportsPage() {
                   <s.icon className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                  <p className="text-xs text-gray-500">{s.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{s.label}</p>
                 </div>
               </div>
             ))}
@@ -125,8 +125,8 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {performance.byDepartment.length > 0 && (
               <div className="card overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-700">Performance by Department</h3>
+                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300">Performance by Department</h3>
                 </div>
                 <div className="p-5 space-y-3">
                   {performance.byDepartment.map((d) => {
@@ -134,10 +134,10 @@ export default function ReportsPage() {
                     return (
                       <div key={d.department}>
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-700 font-medium">{d.department}</span>
-                          <span className="text-gray-500">{d.averageScore.toFixed(1)} / 5 ({d.reviewCount} reviews)</span>
+                          <span className="text-gray-700 dark:text-slate-300 font-medium">{d.department}</span>
+                          <span className="text-gray-500 dark:text-slate-400">{d.averageScore.toFixed(1)} / 5 ({d.reviewCount} reviews)</span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                           <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
@@ -149,8 +149,8 @@ export default function ReportsPage() {
 
             {performance.topPerformers.length > 0 && (
               <div className="card overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-700">Top Performers</h3>
+                <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-300">Top Performers</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -167,16 +167,16 @@ export default function ReportsPage() {
                         <tr key={p.employeeID} className="hover:bg-gray-50">
                           <td className="table-td">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs font-bold w-5 ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-600' : 'text-gray-400'}`}>#{i + 1}</span>
-                              <span className="font-medium text-gray-900">{p.employeeName}</span>
+                              <span className={`text-xs font-bold w-5 ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-gray-400 dark:text-slate-500' : i === 2 ? 'text-amber-600' : 'text-gray-400 dark:text-slate-500'}`}>#{i + 1}</span>
+                              <span className="font-medium text-gray-900 dark:text-slate-100">{p.employeeName}</span>
                             </div>
                           </td>
-                          <td className="table-td text-gray-500">{p.department}</td>
+                          <td className="table-td text-gray-500 dark:text-slate-400">{p.department}</td>
                           <td className="table-td">
-                            <span className="font-semibold text-indigo-600">{p.averageScore.toFixed(1)}</span>
-                            <span className="text-gray-400 text-xs"> / 5</span>
+                            <span className="font-semibold text-indigo-600 dark:text-indigo-400">{p.averageScore.toFixed(1)}</span>
+                            <span className="text-gray-400 dark:text-slate-500 text-xs"> / 5</span>
                           </td>
-                          <td className="table-td text-gray-500">{p.reviewCount}</td>
+                          <td className="table-td text-gray-500 dark:text-slate-400">{p.reviewCount}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -204,8 +204,8 @@ export default function ReportsPage() {
                   <s.icon className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                  <p className="text-xs text-gray-500">{s.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{s.value}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{s.label}</p>
                 </div>
               </div>
             ))}
@@ -230,18 +230,18 @@ export default function ReportsPage() {
                   <tbody className="divide-y divide-gray-100">
                     {training.byTraining.map((t) => (
                       <tr key={t.trainingID} className="hover:bg-gray-50">
-                        <td className="table-td font-medium text-gray-900">{t.title}</td>
+                        <td className="table-td font-medium text-gray-900 dark:text-slate-100">{t.title}</td>
                         <td className="table-td">
-                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{t.status}</span>
+                          <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full">{t.status}</span>
                         </td>
-                        <td className="table-td text-gray-600">{t.enrollmentCount}</td>
-                        <td className="table-td text-emerald-600 font-medium">{t.completedCount}</td>
+                        <td className="table-td text-gray-600 dark:text-slate-400">{t.enrollmentCount}</td>
+                        <td className="table-td text-emerald-600 dark:text-emerald-400 font-medium">{t.completedCount}</td>
                         <td className="table-td">
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
                               <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${t.completionRate}%` }} />
                             </div>
-                            <span className="text-xs text-gray-600 w-10">{t.completionRate}%</span>
+                            <span className="text-xs text-gray-600 dark:text-slate-400 w-10">{t.completionRate}%</span>
                           </div>
                         </td>
                       </tr>

@@ -76,12 +76,16 @@ export default function App() {
 
             {/* Admin + HR */}
             <Route element={<ProtectedRoute roles={[ROLES.ADMIN, ROLES.HR]} />}>
-              <Route path="/employees"                    element={<EmployeesPage />} />
-              <Route path="/employees/:id"                element={<EmployeeDetailPage />} />
-              <Route path="/employees/:id/documents"      element={<EmployeeDocumentsPage />} />
-              <Route path="/selections"                   element={<SelectionsPage />} />
-              <Route path="/compliance"                   element={<CompliancePage />} />
-              <Route path="/audits"                       element={<AuditsPage />} />
+              <Route path="/employees"               element={<EmployeesPage />} />
+              <Route path="/selections"              element={<SelectionsPage />} />
+              <Route path="/compliance"              element={<CompliancePage />} />
+              <Route path="/audits"                  element={<AuditsPage />} />
+            </Route>
+
+            {/* Admin + HR + Manager — managers can view employee profiles on their team */}
+            <Route element={<ProtectedRoute roles={[ROLES.ADMIN, ROLES.HR, ROLES.MANAGER]} />}>
+              <Route path="/employees/:id"           element={<EmployeeDetailPage />} />
+              <Route path="/employees/:id/documents" element={<EmployeeDocumentsPage />} />
             </Route>
 
             {/* Job detail — all authenticated roles can view */}

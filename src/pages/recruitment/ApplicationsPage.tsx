@@ -134,21 +134,21 @@ export default function ApplicationsPage() {
                 <tbody className="divide-y divide-gray-100">
                   {filtered.map((a) => (
                     <tr key={a.applicationID} className="hover:bg-gray-50">
-                      <td className="table-td font-medium text-gray-900">{a.candidateName ?? `Candidate #${a.candidateID}`}</td>
+                      <td className="table-td font-medium text-gray-900 dark:text-slate-100">{a.candidateName ?? `Candidate #${a.candidateID}`}</td>
                       <td className="table-td">{a.jobTitle ?? `Job #${a.jobID}`}</td>
-                      <td className="table-td text-gray-500">{format(new Date(a.submittedDate || a.createdAt), 'MMM d, yyyy')}</td>
+                      <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(a.submittedDate || a.createdAt), 'MMM d, yyyy')}</td>
                       <td className="table-td"><StatusBadge status={a.status} /></td>
                       <td className="table-td">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => openResumeViewer(a)}
-                            className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500"
+                            className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500"
                             title="View Resume"
                           >
                             <DocumentTextIcon className="h-4 w-4" />
                           </button>
                           {can('UPDATE_APPLICATION_STATUS') && (
-                            <button onClick={() => setEditApp(a)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500" title="Update Status">
+                            <button onClick={() => setEditApp(a)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500" title="Update Status">
                               <PencilIcon className="h-4 w-4" />
                             </button>
                           )}
@@ -184,25 +184,25 @@ export default function ApplicationsPage() {
           <div className="flex justify-center py-8"><LoadingSpinner size="md" /></div>
         ) : resume ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <DocumentTextIcon className="h-5 w-5 text-blue-600" />
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                <DocumentTextIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate">{resume.fileURI.split('/').pop() ?? 'Resume'}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-medium text-gray-900 dark:text-slate-100 truncate">{resume.fileURI.split('/').pop() ?? 'Resume'}</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                   Uploaded {format(new Date(resume.uploadedDate || resume.createdAt), 'MMMM d, yyyy')}
                 </p>
               </div>
               <StatusBadge status={resume.status} />
             </div>
-            <p className="text-sm text-gray-500 text-center">Click Download to save a copy of this resume.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400 text-center">Click Download to save a copy of this resume.</p>
           </div>
         ) : (
           <div className="py-8 text-center">
-            <DocumentTextIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-500">No resume uploaded</p>
-            <p className="text-xs text-gray-400 mt-1">This candidate has not uploaded a resume yet.</p>
+            <DocumentTextIcon className="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+            <p className="text-sm font-medium text-gray-500 dark:text-slate-400">No resume uploaded</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">This candidate has not uploaded a resume yet.</p>
           </div>
         )}
       </Modal>
@@ -211,7 +211,7 @@ export default function ApplicationsPage() {
       <Modal open={!!editApp} onClose={() => setEditApp(null)} title="Update Application Status"
         footer={<><Button variant="secondary" onClick={() => setEditApp(null)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onUpdateStatus)}>Update</Button></>}>
         <form className="space-y-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-400">
             Candidate: <strong>{editApp?.candidateName}</strong><br />
             Job: <strong>{editApp?.jobTitle}</strong>
           </p>

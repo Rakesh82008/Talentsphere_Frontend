@@ -151,7 +151,7 @@ export default function EmployeeDocumentsPage() {
     <div>
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-4"
+        className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white mb-4"
       >
         <ArrowLeftIcon className="h-4 w-4" /> Back
       </button>
@@ -212,23 +212,23 @@ export default function EmployeeDocumentsPage() {
                     <tr key={d.documentID} className="hover:bg-gray-50">
                       <td className="table-td font-medium">
                         <div className="flex items-center gap-2">
-                          <DocumentIcon className="h-4 w-4 text-gray-400" />
+                          <DocumentIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
                           {d.docType}
                         </div>
                       </td>
                       <td className="table-td">
                         {d.fileURI ? (
-                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
                             View File
                           </a>
                         ) : (
-                          <span className="text-gray-400 text-sm">No file</span>
+                          <span className="text-gray-400 dark:text-slate-500 text-sm">No file</span>
                         )}
                       </td>
                       <td className="table-td">
                         <StatusBadge status={d.verifyStatus} />
                       </td>
-                      <td className="table-td text-gray-500 text-sm">
+                      <td className="table-td text-gray-500 dark:text-slate-400 text-sm">
                         {format(new Date(d.createdAt), 'MMM d, yyyy')}
                       </td>
                       <td className="table-td">
@@ -239,7 +239,7 @@ export default function EmployeeDocumentsPage() {
                               <button
                                 onClick={() => onVerify(d.documentID, 'Verified')}
                                 disabled={verifyingId === d.documentID}
-                                className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-600 disabled:opacity-50 transition-colors"
+                                className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg text-emerald-600 disabled:opacity-50 transition-colors"
                                 title="Verify"
                               >
                                 <CheckCircleIcon className="h-4 w-4" />
@@ -247,7 +247,7 @@ export default function EmployeeDocumentsPage() {
                               <button
                                 onClick={() => onVerify(d.documentID, 'Rejected')}
                                 disabled={verifyingId === d.documentID}
-                                className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 disabled:opacity-50 transition-colors"
+                                className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 disabled:opacity-50 transition-colors"
                                 title="Reject"
                               >
                                 <XCircleIcon className="h-4 w-4" />
@@ -305,7 +305,7 @@ export default function EmployeeDocumentsPage() {
           <div>
             <label className="form-label">File <span className="text-red-500">*</span></label>
             <div
-              className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               <input
@@ -318,14 +318,14 @@ export default function EmployeeDocumentsPage() {
               {selectedFile ? (
                 <div className="text-center">
                   <DocumentIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{selectedFile.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                 </div>
               ) : (
                 <div className="text-center">
-                  <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Click to select a file</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, JPG, PNG · Max 10 MB</p>
+                  <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 dark:text-slate-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-slate-400">Click to select a file</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">PDF, DOC, DOCX, JPG, PNG · Max 10 MB</p>
                 </div>
               )}
             </div>

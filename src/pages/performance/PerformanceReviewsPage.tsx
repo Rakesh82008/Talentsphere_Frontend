@@ -95,9 +95,9 @@ export default function PerformanceReviewsPage() {
   const RatingStars = ({ rating }: { rating: number }) => (
     <div className="flex items-center gap-1">
       {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={`text-base ${i < rating ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+        <span key={i} className={`text-base ${i < rating ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-600'}`}>★</span>
       ))}
-      <span className="text-xs text-gray-500 ml-1">{rating}/5</span>
+      <span className="text-xs text-gray-500 dark:text-slate-400 ml-1">{rating}/5</span>
     </div>
   )
 
@@ -138,14 +138,14 @@ export default function PerformanceReviewsPage() {
                 {filtered.map((r) => (
                   <tr key={r.reviewID} className="hover:bg-gray-50">
                     {!isEmployee() && <td className="table-td font-medium">{r.employeeName ?? `Employee #${r.employeeID}`}</td>}
-                    <td className="table-td text-gray-600">{format(new Date(r.reviewDate), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-600 dark:text-slate-400">{format(new Date(r.reviewDate), 'MMM d, yyyy')}</td>
                     <td className="table-td"><RatingStars rating={r.rating} /></td>
-                    <td className="table-td text-gray-500 max-w-xs truncate">{r.comments ?? '—'}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">{r.comments ?? '—'}</td>
                     {can('MANAGE_REVIEWS') && (
                       <td className="table-td">
                         <div className="flex gap-2">
-                          <button onClick={() => setEditReview(r)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                          <button onClick={() => setDeleteId(r.reviewID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                          <button onClick={() => setEditReview(r)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
+                          <button onClick={() => setDeleteId(r.reviewID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
                         </div>
                       </td>
                     )}

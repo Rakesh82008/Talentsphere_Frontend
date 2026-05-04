@@ -28,10 +28,10 @@ export default function AuditLogsPage() {
   )
 
   const actionColors: Record<string, string> = {
-    Create: 'bg-green-100 text-green-700',
-    Update: 'bg-blue-100 text-blue-700',
-    Delete: 'bg-red-100 text-red-700',
-    Login:  'bg-purple-100 text-purple-700',
+    Create: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+    Update: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+    Delete: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+    Login:  'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
   }
 
   return (
@@ -63,10 +63,10 @@ export default function AuditLogsPage() {
                   <tr key={l.auditLogID} className="hover:bg-gray-50">
                     <td className="table-td font-medium">{l.userName ?? `User #${l.userID}`}</td>
                     <td className="table-td">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${actionColors[l.action] ?? 'bg-gray-100 text-gray-700'}`}>{l.action}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${actionColors[l.action] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400'}`}>{l.action}</span>
                     </td>
-                    <td className="table-td text-gray-500 max-w-xs truncate">{l.description ?? '—'}</td>
-                    <td className="table-td text-gray-500 whitespace-nowrap">{format(new Date(l.createdAt), 'MMM d, yyyy HH:mm')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">{l.description ?? '—'}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 whitespace-nowrap">{format(new Date(l.createdAt), 'MMM d, yyyy HH:mm')}</td>
                   </tr>
                 ))}
               </tbody>

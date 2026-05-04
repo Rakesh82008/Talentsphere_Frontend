@@ -4,6 +4,7 @@ import { ArrowLeftIcon, DocumentTextIcon, CalendarIcon } from '@heroicons/react/
 import toast from 'react-hot-toast'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
+import { resumesApi } from '../../api/resumes'
 import type { JobResponse, ApplicationResponse } from '../../types'
 import { useAuth } from '../../hooks/useAuth'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
@@ -20,6 +21,7 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
+  const [hasResume, setHasResume] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -29,14 +31,18 @@ export default function JobDetailPage() {
         const jobPromise = jobsApi.getById(parseInt(id))
 
         if (isCandidate() && user) {
-          // Candidates only need their own applications to check if they've applied
-          const [j, myApps] = await Promise.allSettled([
+          const [j, myApps, resumes] = await Promise.allSettled([
             jobPromise,
             applicationsApi.getByCandidate(user.userId),
+            resumesApi.getByCandidate(user.userId),
           ])
           if (j.status === 'fulfilled') setJob(j.value)
           if (myApps.status === 'fulfilled') {
             setHasApplied(myApps.value.some((a) => a.jobID === parseInt(id)))
+          }
+          if (resumes.status === 'fulfilled') {
+            const list = Array.isArray(resumes.value) ? resumes.value : []
+            setHasResume(list.length > 0)
           }
         } else {
           const [j, apps] = await Promise.allSettled([
@@ -54,6 +60,11 @@ export default function JobDetailPage() {
 
   const applyNow = async () => {
     if (!job || !user) return
+    if (!hasResume) {
+      toast.error('Please upload your resume before applying.')
+      navigate('/my-resume')
+      return
+    }
     setApplying(true)
     try {
       await applicationsApi.create({ jobID: job.jobID, candidateID: user.userId })
@@ -68,7 +79,7 @@ export default function JobDetailPage() {
 
   return (
     <div>
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white mb-6">
         <ArrowLeftIcon className="h-4 w-4" /> Back to Jobs
       </button>
 
@@ -77,34 +88,34 @@ export default function JobDetailPage() {
           <div className="card p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{job.title}</h1>
-                <p className="text-gray-500 mt-1">{job.department}</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{job.title}</h1>
+                <p className="text-gray-500 dark:text-slate-400 mt-1">{job.department}</p>
               </div>
               <StatusBadge status={job.status} />
             </div>
             <div className="prose prose-sm max-w-none">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Job Description</h3>
-              <p className="text-gray-600 whitespace-pre-wrap text-sm">{job.description}</p>
-              <h3 className="text-sm font-semibold text-gray-900 mt-4 mb-2">Requirements</h3>
-              <p className="text-gray-600 whitespace-pre-wrap text-sm">{job.requirements}</p>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100 mb-2">Job Description</h3>
+              <p className="text-gray-600 dark:text-slate-400 whitespace-pre-wrap text-sm">{job.description}</p>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100 mt-4 mb-2">Requirements</h3>
+              <p className="text-gray-600 dark:text-slate-400 whitespace-pre-wrap text-sm">{job.requirements}</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="card p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Job Details</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-4">Job Details</h3>
             <dl className="space-y-3 text-sm">
-              <div className="flex justify-between"><dt className="text-gray-500">Department</dt><dd className="font-medium">{job.department}</dd></div>
-              <div className="flex justify-between"><dt className="text-gray-500">Status</dt><dd><StatusBadge status={job.status} /></dd></div>
-              <div className="flex justify-between"><dt className="text-gray-500">Posted</dt><dd className="font-medium">{format(new Date(job.postedDate || job.createdAt), 'MMM d, yyyy')}</dd></div>
-              {!isCandidate() && <div className="flex justify-between"><dt className="text-gray-500">Applications</dt><dd className="font-medium">{applications.length}</dd></div>}
+              <div className="flex justify-between"><dt className="text-gray-500 dark:text-slate-400">Department</dt><dd className="font-medium">{job.department}</dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500 dark:text-slate-400">Status</dt><dd><StatusBadge status={job.status} /></dd></div>
+              <div className="flex justify-between"><dt className="text-gray-500 dark:text-slate-400">Posted</dt><dd className="font-medium">{format(new Date(job.postedDate || job.createdAt), 'MMM d, yyyy')}</dd></div>
+              {!isCandidate() && <div className="flex justify-between"><dt className="text-gray-500 dark:text-slate-400">Applications</dt><dd className="font-medium">{applications.length}</dd></div>}
             </dl>
 
             {isCandidate() && job.status === 'Open' && (
               <div className="mt-5">
                 {hasApplied ? (
-                  <div className="text-center py-2 text-sm text-emerald-600 font-medium bg-emerald-50 rounded-lg">
+                  <div className="text-center py-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
                     ✓ You've already applied
                   </div>
                 ) : (
@@ -118,11 +129,11 @@ export default function JobDetailPage() {
 
           {!isCandidate() && applications.length > 0 && (
             <div className="card p-5">
-              <h3 className="font-semibold text-gray-900 mb-3">Recent Applications</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-3">Recent Applications</h3>
               <ul className="space-y-2">
                 {applications.slice(0, 5).map((a) => (
                   <li key={a.applicationID} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-700">{a.candidateName ?? `Candidate #${a.candidateID}`}</span>
+                    <span className="text-gray-700 dark:text-slate-300">{a.candidateName ?? `Candidate #${a.candidateID}`}</span>
                     <StatusBadge status={a.status} />
                   </li>
                 ))}

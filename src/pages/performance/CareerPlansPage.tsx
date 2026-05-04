@@ -112,18 +112,18 @@ export default function CareerPlansPage() {
             <div key={p.planID} className="card p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-gray-900">{p.title}</h3>
-                  {!isEmployee() && <p className="text-sm text-gray-500">{p.employeeName ?? `Employee #${p.employeeID}`}</p>}
+                  <h3 className="font-semibold text-gray-900 dark:text-slate-100">{p.title}</h3>
+                  {!isEmployee() && <p className="text-sm text-gray-500 dark:text-slate-400">{p.employeeName ?? `Employee #${p.employeeID}`}</p>}
                 </div>
                 <StatusBadge status={p.status} />
               </div>
-              {p.description && <p className="text-sm text-gray-600 mb-4 line-clamp-3">{p.description}</p>}
-              <div className="flex items-center justify-between text-xs text-gray-400 mt-auto">
+              {p.description && <p className="text-sm text-gray-600 dark:text-slate-400 mb-4 line-clamp-3">{p.description}</p>}
+              <div className="flex items-center justify-between text-xs text-gray-400 dark:text-slate-500 mt-auto">
                 <span>{format(new Date(p.createdAt), 'MMM d, yyyy')}</span>
                 {can('MANAGE_CAREER_PLANS') && (
                   <div className="flex gap-1">
-                    <button onClick={() => setEditPlan(p)} className="p-1.5 hover:bg-amber-50 rounded text-amber-500"><PencilIcon className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => setDeleteId(p.planID)} className="p-1.5 hover:bg-red-50 rounded text-red-500"><TrashIcon className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setEditPlan(p)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded text-amber-500"><PencilIcon className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => setDeleteId(p.planID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-500"><TrashIcon className="h-3.5 w-3.5" /></button>
                   </div>
                 )}
               </div>

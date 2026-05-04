@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
@@ -17,13 +17,17 @@ import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
 import SearchBar from '../../components/common/SearchBar'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useAuth } from '../../hooks/useAuth'
 import { format } from 'date-fns'
 
 type FormData = Omit<CreateEmployeeDTO, 'userId' | 'managerID'> & { userId: string; managerID: string }
 
 export default function EmployeesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isMyTeam = location.pathname === '/my-team'
   const { can } = usePermissions()
+  const { user } = useAuth()
   const [employees, setEmployees] = useState<EmployeeResponse[]>([])
   const [users, setUsers] = useState<UserResponse[]>([])
   const [userRoles, setUserRoles] = useState<UserRoleResponse[]>([])
@@ -40,15 +44,25 @@ export default function EmployeesPage() {
   const load = async () => {
     setLoading(true)
     try {
-      const [e, u, ur] = await Promise.all([employeesApi.getAll(), usersApi.getAll(), usersApi.getUserRoles()])
-      setEmployees(e)
-      setUsers(u)
-      setUserRoles(ur)
+      if (isMyTeam) {
+        const allEmps = await employeesApi.getAll()
+        setEmployees(user ? allEmps.filter((e) => e.managerID === user.userId) : [])
+      } else {
+        const [eRes, uRes, urRes] = await Promise.allSettled([
+          employeesApi.getAll(),
+          usersApi.getAll(),
+          usersApi.getUserRoles(),
+        ])
+        if (eRes.status === 'fulfilled') setEmployees(eRes.value)
+        else toast.error('Failed to load employees')
+        if (uRes.status === 'fulfilled') setUsers(uRes.value)
+        if (urRes.status === 'fulfilled') setUserRoles(urRes.value)
+      }
     } catch { toast.error('Failed to load employees') }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [isMyTeam])
 
   useEffect(() => {
     if (editEmployee) {
@@ -127,9 +141,9 @@ export default function EmployeesPage() {
       </div>
       <Select label="Status" required options={[{value:'Active',label:'Active'},{value:'OnLeave',label:'On Leave'},{value:'Inactive',label:'Inactive'},{value:'Terminated',label:'Terminated'}]} {...register('status')} />
       <Select label="Manager (optional)" placeholder="No manager"
-        options={employees
-          .filter((e) => userRoles.some((ur) => ur.userId === e.userId && ur.roleName === 'Manager'))
-          .map((e) => ({ value: e.employeeID, label: e.name }))}
+        options={users
+          .filter((u) => userRoles.some((ur) => Number(ur.userId) === Number(u.userID) && String(ur.roleName).toLowerCase() === 'manager'))
+          .map((u) => ({ value: u.userID, label: u.name }))}
         {...register('managerID')} />
     </form>
   )
@@ -137,9 +151,9 @@ export default function EmployeesPage() {
   return (
     <div>
       <PageHeader
-        title="Employees"
-        subtitle="Manage your workforce"
-        actions={can('MANAGE_EMPLOYEES') && (
+        title={isMyTeam ? 'My Team' : 'Employees'}
+        subtitle={isMyTeam ? 'Employees reporting to you' : 'Manage your workforce'}
+        actions={!isMyTeam && can('MANAGE_EMPLOYEES') && (
           <Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => { reset({ status: 'Active' }); setShowCreate(true) }}>
             Add Employee
           </Button>
@@ -154,7 +168,7 @@ export default function EmployeesPage() {
         {loading ? (
           <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="No employees found" description="Add your first employee to get started." />
+          <EmptyState title="No employees found" description={isMyTeam ? 'No employees are currently reporting to you.' : 'Add your first employee to get started.'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -173,24 +187,24 @@ export default function EmployeesPage() {
                   <tr key={e.employeeID} className="hover:bg-gray-50">
                     <td className="table-td">
                       <div>
-                        <p className="font-medium text-gray-900">{e.name}</p>
-                        {e.managerName && <p className="text-xs text-gray-400">Mgr: {e.managerName}</p>}
+                        <p className="font-medium text-gray-900 dark:text-slate-100">{e.name}</p>
+                        {e.managerName && <p className="text-xs text-gray-400 dark:text-slate-500">Mgr: {e.managerName}</p>}
                       </div>
                     </td>
                     <td className="table-td">{e.department}</td>
                     <td className="table-td">{e.position}</td>
-                    <td className="table-td text-gray-500">{format(new Date(e.joinDate), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(e.joinDate), 'MMM d, yyyy')}</td>
                     <td className="table-td"><StatusBadge status={e.status} /></td>
                     <td className="table-td">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => navigate(`/employees/${e.employeeID}`)} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors" title="View">
+                        <button onClick={() => navigate(`/employees/${e.employeeID}`)} className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors" title="View">
                           <EyeIcon className="h-4 w-4" />
                         </button>
                         {can('MANAGE_EMPLOYEES') && <>
-                          <button onClick={() => setEditEmployee(e)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500 transition-colors" title="Edit">
+                          <button onClick={() => setEditEmployee(e)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500 transition-colors" title="Edit">
                             <PencilIcon className="h-4 w-4" />
                           </button>
-                          <button onClick={() => setDeleteId(e.employeeID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete">
+                          <button onClick={() => setDeleteId(e.employeeID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors" title="Delete">
                             <TrashIcon className="h-4 w-4" />
                           </button>
                         </>}

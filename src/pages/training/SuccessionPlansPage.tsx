@@ -117,11 +117,11 @@ export default function SuccessionPlansPage() {
                     <td className="table-td font-medium">{p.employeeName ?? `Employee #${p.employeeID}`}</td>
                     <td className="table-td">{p.successorName ?? `Employee #${p.successorID}`}</td>
                     <td className="table-td"><StatusBadge status={p.status} /></td>
-                    <td className="table-td text-gray-500">{format(new Date(p.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(p.createdAt), 'MMM d, yyyy')}</td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditPlan(p)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(p.successionID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                        <button onClick={() => setEditPlan(p)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
+                        <button onClick={() => setDeleteId(p.successionID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
                       </div>
                     </td>
                   </tr>

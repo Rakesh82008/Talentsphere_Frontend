@@ -112,7 +112,7 @@ export default function EnrollmentsPage() {
 
   const getStatusBadge = (e: EnrollmentResponse) => {
     if (e.isOverdue) return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
         <ExclamationTriangleIcon className="h-3 w-3" /> Overdue
       </span>
     )
@@ -152,17 +152,17 @@ export default function EnrollmentsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {enrollments.map((e) => (
-                  <tr key={e.enrollmentID} className={`hover:bg-gray-50 ${e.isOverdue ? 'bg-red-50/30' : ''}`}>
+                  <tr key={e.enrollmentID} className={`hover:bg-gray-50 ${e.isOverdue ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}>
                     {!isEmployee() && <td className="table-td font-medium">{e.employeeName ?? `#${e.employeeID}`}</td>}
                     <td className="table-td">
-                      <p className="font-medium text-gray-900">{e.trainingTitle ?? `Training #${e.trainingID}`}</p>
+                      <p className="font-medium text-gray-900 dark:text-slate-100">{e.trainingTitle ?? `Training #${e.trainingID}`}</p>
                       {e.trainingStartDate && e.trainingEndDate && (
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                           📅 {format(new Date(e.trainingStartDate), 'MMM d')} – {format(new Date(e.trainingEndDate), 'MMM d, yyyy')}
                         </p>
                       )}
                       {e.classStartTime && e.classEndTime && (
-                        <p className="text-xs text-blue-600 font-medium mt-0.5">
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">
                           🕐 {e.classStartTime} – {e.classEndTime}
                         </p>
                       )}
@@ -179,21 +179,21 @@ export default function EnrollmentsPage() {
                       )}
                     </td>
                     <td className="table-td">
-                      {e.trainingType && <span className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full block w-fit mb-0.5">{e.trainingType}</span>}
-                      {e.deliveryMode && <span className="text-xs text-gray-500">{e.deliveryMode}</span>}
+                      {e.trainingType && <span className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full block w-fit mb-0.5">{e.trainingType}</span>}
+                      {e.deliveryMode && <span className="text-xs text-gray-500 dark:text-slate-400">{e.deliveryMode}</span>}
                     </td>
-                    <td className="table-td text-gray-500 text-sm">
+                    <td className="table-td text-gray-500 dark:text-slate-400 text-sm">
                       {format(new Date(e.createdAt), 'MMM d, yyyy')}
                     </td>
-                    <td className="table-td text-xs text-gray-500">
+                    <td className="table-td text-xs text-gray-500 dark:text-slate-400">
                       {e.completedAt ? (
-                        <span className="text-emerald-600">✓ {format(new Date(e.completedAt), 'MMM d, yyyy')}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">✓ {format(new Date(e.completedAt), 'MMM d, yyyy')}</span>
                       ) : e.startedAt ? (
-                        <span className="text-blue-600">Started {format(new Date(e.startedAt), 'MMM d')}</span>
+                        <span className="text-blue-600 dark:text-blue-400">Started {format(new Date(e.startedAt), 'MMM d')}</span>
                       ) : (
-                        <span className="text-gray-400">Not started</span>
+                        <span className="text-gray-400 dark:text-slate-500">Not started</span>
                       )}
-                      {e.score != null && <p className="text-gray-700 font-medium">Score: {e.score}/100</p>}
+                      {e.score != null && <p className="text-gray-700 dark:text-slate-300 font-medium">Score: {e.score}/100</p>}
                     </td>
                     <td className="table-td">{getStatusBadge(e)}</td>
                     {!isEmployee() && (
@@ -202,14 +202,14 @@ export default function EnrollmentsPage() {
                           {can('MANAGE_ENROLLMENTS') && e.status !== 'Completed' && e.status !== 'Cancelled' && (
                             <button
                               onClick={() => { completeForm.reset(); setCompleteId(e.enrollmentID) }}
-                              className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-500"
+                              className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg text-emerald-500"
                               title="Mark Complete"
                             >
                               <CheckCircleIcon className="h-4 w-4" />
                             </button>
                           )}
                           {can('MANAGE_ENROLLMENTS') && (
-                            <button onClick={() => setDeleteId(e.enrollmentID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500" title="Remove">
+                            <button onClick={() => setDeleteId(e.enrollmentID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500" title="Remove">
                               <TrashIcon className="h-4 w-4" />
                             </button>
                           )}
@@ -234,7 +234,7 @@ export default function EnrollmentsPage() {
           <Select label="Training Program" required placeholder="Select training" error={enrollForm.formState.errors.trainingID?.message}
             options={trainings.map((t) => ({ value: t.trainingID, label: `${t.title} (${t.trainingType})` }))}
             {...enrollForm.register('trainingID', { required: 'Training is required' })} />
-          <p className="text-xs text-gray-500">Employee will be notified when enrolled.</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">Employee will be notified when enrolled.</p>
         </form>
       </Modal>
 
@@ -248,7 +248,7 @@ export default function EnrollmentsPage() {
             <textarea className="input min-h-[70px]" placeholder="Any notes about the completion..." {...completeForm.register('notes')} />
           </div>
           <Input label="Certificate URL (optional)" type="url" placeholder="https://..." {...completeForm.register('certificateUrl')} />
-          <p className="text-xs text-gray-500">Employee will receive a completion notification.</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400">Employee will receive a completion notification.</p>
         </form>
       </Modal>
 

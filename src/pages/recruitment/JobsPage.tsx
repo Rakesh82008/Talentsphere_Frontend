@@ -148,16 +148,16 @@ export default function JobsPage() {
                 <tbody className="divide-y divide-gray-100">
                   {jobs.map((j) => (
                     <tr key={j.jobID} className="hover:bg-gray-50">
-                      <td className="table-td font-medium text-gray-900">{j.title}</td>
+                      <td className="table-td font-medium text-gray-900 dark:text-slate-100">{j.title}</td>
                       <td className="table-td">{j.department}</td>
                       <td className="table-td"><StatusBadge status={j.status} /></td>
-                      <td className="table-td text-gray-500">{format(new Date(j.postedDate || j.createdAt), 'MMM d, yyyy')}</td>
+                      <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(j.postedDate || j.createdAt), 'MMM d, yyyy')}</td>
                       <td className="table-td">
                         <div className="flex items-center gap-2">
-                          <button onClick={() => navigate(`/jobs/${j.jobID}`)} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500" title="View"><EyeIcon className="h-4 w-4" /></button>
+                          <button onClick={() => navigate(`/jobs/${j.jobID}`)} className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500" title="View"><EyeIcon className="h-4 w-4" /></button>
                           {can('MANAGE_JOBS') && <>
-                            <button onClick={() => setEditJob(j)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500" title="Edit"><PencilIcon className="h-4 w-4" /></button>
-                            {can('DELETE_JOB') && <button onClick={() => setDeleteId(j.jobID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500" title="Delete"><TrashIcon className="h-4 w-4" /></button>}
+                            <button onClick={() => setEditJob(j)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500" title="Edit"><PencilIcon className="h-4 w-4" /></button>
+                            {can('DELETE_JOB') && <button onClick={() => setDeleteId(j.jobID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500" title="Delete"><TrashIcon className="h-4 w-4" /></button>}
                           </>}
                         </div>
                       </td>

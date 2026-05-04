@@ -133,12 +133,12 @@ export default function ScreeningsPage() {
                     <td className="table-td font-medium">{s.candidateName ?? `Application #${s.applicationID}`}</td>
                     <td className="table-td">{s.jobTitle ?? '—'}</td>
                     <td className="table-td"><StatusBadge status={s.result} /></td>
-                    <td className="table-td text-gray-500 max-w-xs truncate">{s.feedback ?? '—'}</td>
-                    <td className="table-td text-gray-500">{format(new Date(s.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">{s.feedback ?? '—'}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(s.createdAt), 'MMM d, yyyy')}</td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditScreening(s)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(s.screeningID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                        <button onClick={() => setEditScreening(s)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
+                        <button onClick={() => setDeleteId(s.screeningID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
                       </div>
                     </td>
                   </tr>

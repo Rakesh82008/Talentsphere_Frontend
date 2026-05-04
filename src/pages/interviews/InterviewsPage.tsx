@@ -157,15 +157,15 @@ export default function InterviewsPage() {
                   <tr key={i.interviewID} className="hover:bg-gray-50">
                     <td className="table-td font-medium">{i.candidateName ?? `App #${i.applicationID}`}</td>
                     <td className="table-td">{i.jobTitle ?? '—'}</td>
-                    <td className="table-td text-gray-600">{format(new Date(i.date), 'MMM d, yyyy')} {i.time}</td>
+                    <td className="table-td text-gray-600 dark:text-slate-400">{format(new Date(i.date), 'MMM d, yyyy')} {i.time}</td>
                     <td className="table-td">{i.location}</td>
                     <td className="table-td">{i.interviewerName ?? `User #${i.interviewerID}`}</td>
                     <td className="table-td"><StatusBadge status={i.status} /></td>
                     <td className="table-td">
                       <div className="flex gap-2">
                         {can('MANAGE_INTERVIEWS') && <>
-                          <button onClick={() => setStatusInterview(i)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500" title="Update Status"><PencilIcon className="h-4 w-4" /></button>
-                          <button onClick={() => setDeleteId(i.interviewID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500" title="Delete"><TrashIcon className="h-4 w-4" /></button>
+                          <button onClick={() => setStatusInterview(i)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500" title="Update Status"><PencilIcon className="h-4 w-4" /></button>
+                          <button onClick={() => setDeleteId(i.interviewID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500" title="Delete"><TrashIcon className="h-4 w-4" /></button>
                         </>}
                       </div>
                     </td>
@@ -203,8 +203,8 @@ export default function InterviewsPage() {
         <form className="space-y-4">
           {statusInterview && NEXT_STATUSES[statusInterview.status]?.length ? (
             <>
-              <p className="text-sm text-gray-500">
-                Current status: <span className="font-medium text-gray-700">{statusInterview.status}</span>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                Current status: <span className="font-medium text-gray-700 dark:text-slate-300">{statusInterview.status}</span>
               </p>
               <Select
                 label="New Status"
@@ -217,7 +217,7 @@ export default function InterviewsPage() {
               </div>
             </>
           ) : (
-            <p className="text-sm text-gray-500 py-4 text-center">
+            <p className="text-sm text-gray-500 dark:text-slate-400 py-4 text-center">
               This interview is <strong>{statusInterview?.status}</strong> and cannot be updated further.
             </p>
           )}

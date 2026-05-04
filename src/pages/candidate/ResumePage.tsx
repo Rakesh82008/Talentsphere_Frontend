@@ -116,7 +116,7 @@ export default function ResumePage() {
         }
       />
 
-      <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+      <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
         Accepted formats: PDF, DOC, DOCX — Maximum file size: 5MB.{' '}
         {resume ? 'To update your resume, use the Replace button.' : 'You can upload one resume.'}
       </div>
@@ -141,12 +141,12 @@ export default function ResumePage() {
         </div>
       ) : (
         <div className="card p-5 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <DocumentIcon className="h-6 w-6 text-blue-600" />
+          <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+            <DocumentIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">{resume.fileURI.split('/').pop() ?? 'Resume'}</p>
-            <div className="flex items-center gap-3 text-sm text-gray-500">
+            <p className="font-medium text-gray-900 dark:text-slate-100 truncate">{resume.fileURI.split('/').pop() ?? 'Resume'}</p>
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-slate-400">
               <span>Uploaded {format(new Date(resume.uploadedDate || resume.createdAt), 'MMM d, yyyy')}</span>
               <StatusBadge status={resume.status} />
             </div>
@@ -171,7 +171,7 @@ export default function ResumePage() {
             </Button>
             <button
               onClick={() => setDeleteId(resume.resumeID)}
-              className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"
+              className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors"
               title="Delete resume"
             >
               <TrashIcon className="h-4 w-4" />

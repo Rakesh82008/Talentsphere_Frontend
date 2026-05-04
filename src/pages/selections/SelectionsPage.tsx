@@ -80,7 +80,7 @@ export default function SelectionsPage() {
         actions={<Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => { reset({ decision: 'Selected' }); setShowDecide(true) }}>Make Decision</Button>}
       />
 
-      <div className="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+      <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
         <strong>Workflow:</strong> When you select a candidate, the system automatically creates an Employee record and promotes the user role from Candidate to Employee.
       </div>
 
@@ -111,8 +111,8 @@ export default function SelectionsPage() {
                     <td className="table-td font-medium">{s.candidateName ?? `Application #${s.applicationID}`}</td>
                     <td className="table-td">{s.jobTitle ?? '—'}</td>
                     <td className="table-td"><StatusBadge status={s.decision} /></td>
-                    <td className="table-td text-gray-500 max-w-xs truncate">{s.notes ?? '—'}</td>
-                    <td className="table-td text-gray-500">{format(new Date(s.date || s.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">{s.notes ?? '—'}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(s.date || s.createdAt), 'MMM d, yyyy')}</td>
                   </tr>
                 ))}
               </tbody>

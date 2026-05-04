@@ -26,12 +26,12 @@ export default function RegisterPage() {
       navigate('/login')
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }
-      const data = error.response?.data
-      if (data?.errors) {
-        const first = Object.values(data.errors).flat()[0]
+      const errData = error.response?.data
+      if (errData?.errors) {
+        const first = Object.values(errData.errors).flat()[0]
         toast.error(first ?? 'Registration failed')
       } else {
-        toast.error(data?.message ?? 'Registration failed')
+        toast.error(errData?.message ?? 'Registration failed')
       }
     } finally {
       setLoading(false)
@@ -39,18 +39,24 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 shadow-lg mb-4">
-            <span className="text-2xl font-bold text-white">TS</span>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-slate-50 dark:bg-[#0a0f1e]">
+      <div className="w-full max-w-lg">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-sm">TS</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">Create Account</h1>
-          <p className="text-gray-400 mt-1">Register as a candidate</p>
+          <span className="text-slate-900 dark:text-white font-bold text-lg">TalentSphere</span>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Card */}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-card p-6 sm:p-8">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Create your account</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Register as a candidate to start your application journey</p>
+          </div>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e) }} className="space-y-4">
             <Input
               label="Full Name"
               placeholder="John Smith"
@@ -59,25 +65,27 @@ export default function RegisterPage() {
               {...register('name', { required: 'Name is required' })}
             />
 
-            <Input
-              label="Email Address"
-              type="email"
-              placeholder="you@example.com"
-              required
-              error={errors.email?.message}
-              {...register('email', {
-                required: 'Email is required',
-                pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' },
-              })}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Email Address"
+                type="email"
+                placeholder="you@example.com"
+                required
+                error={errors.email?.message}
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' },
+                })}
+              />
 
-            <Input
-              label="Phone"
-              type="tel"
-              placeholder="+1 555 000 0000"
-              error={errors.phone?.message}
-              {...register('phone')}
-            />
+              <Input
+                label="Phone"
+                type="tel"
+                placeholder="+1 555 000 0000"
+                error={errors.phone?.message}
+                {...register('phone')}
+              />
+            </div>
 
             <Input
               label="Password"
@@ -85,6 +93,7 @@ export default function RegisterPage() {
               placeholder="Min 8 chars, 1 uppercase, 1 number"
               required
               error={errors.password?.message}
+              hint="Must be at least 8 characters with one uppercase letter and one number"
               {...register('password', {
                 required: 'Password is required',
                 minLength: { value: 8, message: 'Password must be at least 8 characters' },
@@ -107,18 +116,18 @@ export default function RegisterPage() {
               })}
             />
 
-            <Button type="submit" loading={loading} className="w-full mt-2">
+            <Button type="submit" loading={loading} className="w-full py-2.5 mt-2">
               Create Account
             </Button>
           </form>
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline font-medium">
-              Sign In
-            </Link>
-          </p>
         </div>
+
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">
+          Already have an account?{' '}
+          <Link to="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+            Sign In
+          </Link>
+        </p>
       </div>
     </div>
   )

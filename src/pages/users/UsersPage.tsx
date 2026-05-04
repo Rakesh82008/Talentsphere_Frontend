@@ -131,24 +131,24 @@ export default function UsersPage() {
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((u) => (
                   <tr key={u.userID} className="hover:bg-gray-50">
-                    <td className="table-td font-medium text-gray-900">{u.name}</td>
-                    <td className="table-td text-gray-500">{u.email}</td>
+                    <td className="table-td font-medium text-gray-900 dark:text-slate-100">{u.name}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{u.email}</td>
                     <td className="table-td">
                       {getUserRole(u.userID)
-                        ? <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{getUserRole(u.userID)}</span>
-                        : <span className="text-gray-400 text-xs">No role</span>}
+                        ? <span className="inline-block px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">{getUserRole(u.userID)}</span>
+                        : <span className="text-gray-400 dark:text-slate-500 text-xs">No role</span>}
                     </td>
                     <td className="table-td"><StatusBadge status={u.status} /></td>
-                    <td className="table-td text-gray-500">{format(new Date(u.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(u.createdAt), 'MMM d, yyyy')}</td>
                     <td className="table-td">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setRoleUser(u)} className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-500 transition-colors" title="Change Role">
+                        <button onClick={() => setRoleUser(u)} className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg text-indigo-500 transition-colors" title="Change Role">
                           <KeyIcon className="h-4 w-4" />
                         </button>
-                        <button onClick={() => setEditUser(u)} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors" title="Edit">
+                        <button onClick={() => setEditUser(u)} className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors" title="Edit">
                           <PencilIcon className="h-4 w-4" />
                         </button>
-                        <button onClick={() => setDeleteId(u.userID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete">
+                        <button onClick={() => setDeleteId(u.userID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors" title="Delete">
                           <TrashIcon className="h-4 w-4" />
                         </button>
                       </div>
@@ -179,8 +179,8 @@ export default function UsersPage() {
           {roleUser && (() => {
             const current = userRoles.find((ur) => ur.userId === roleUser.userID)
             return current ? (
-              <p className="text-sm text-gray-500">
-                Current role: <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">{current.roleName}</span>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                Current role: <span className="inline-block px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">{current.roleName}</span>
               </p>
             ) : (
               <p className="text-sm text-amber-600">This user has no role assigned yet.</p>

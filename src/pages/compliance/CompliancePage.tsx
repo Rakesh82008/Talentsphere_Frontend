@@ -91,10 +91,10 @@ export default function CompliancePage() {
   )
 
   const typeColors: Record<string, string> = {
-    Certificate: 'bg-blue-100 text-blue-700',
-    License: 'bg-purple-100 text-purple-700',
-    Training: 'bg-green-100 text-green-700',
-    Background: 'bg-orange-100 text-orange-700',
+    Certificate: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+    License: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+    Training: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+    Background: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
   }
 
   return (
@@ -131,14 +131,14 @@ export default function CompliancePage() {
                   <tr key={r.complianceID} className="hover:bg-gray-50">
                     <td className="table-td font-medium">{r.employeeName ?? `Employee #${r.employeeID}`}</td>
                     <td className="table-td">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[r.recordType] ?? 'bg-gray-100 text-gray-700'}`}>{r.recordType}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[r.recordType] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400'}`}>{r.recordType}</span>
                     </td>
-                    <td className="table-td text-gray-500 max-w-xs truncate">{r.description ?? '—'}</td>
-                    <td className="table-td text-gray-500">{format(new Date(r.createdAt), 'MMM d, yyyy')}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">{r.description ?? '—'}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(r.createdAt), 'MMM d, yyyy')}</td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditRecord(r)} className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(r.complianceID)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                        <button onClick={() => setEditRecord(r)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
+                        <button onClick={() => setDeleteId(r.complianceID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
                       </div>
                     </td>
                   </tr>

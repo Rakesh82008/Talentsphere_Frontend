@@ -184,6 +184,13 @@ const authSlice = createSlice({
         state.token = token
         state.isAuthenticated = true
       })
+      .addCase(refreshToken.rejected, (state) => {
+        state.user = null
+        state.token = null
+        state.isAuthenticated = false
+        state.error = null
+        localStorage.removeItem('ts_token')
+      })
   },
 })
 

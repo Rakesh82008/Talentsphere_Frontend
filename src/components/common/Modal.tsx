@@ -21,8 +21,14 @@ const sizeMap = {
 export default function Modal({ open, onClose, title, children, size = 'md', footer }: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    if (open) document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
+    if (open) {
+      document.addEventListener('keydown', handler)
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      document.removeEventListener('keydown', handler)
+      document.body.style.overflow = ''
+    }
   }, [open, onClose])
 
   if (!open) return null
@@ -31,14 +37,16 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden
       />
       {/* Panel */}
       <div
         className={clsx(
-          'relative w-full rounded-xl bg-white shadow-2xl flex flex-col max-h-[90vh]',
+          'relative w-full rounded-2xl shadow-modal flex flex-col max-h-[90vh] animate-scale-in',
+          'bg-white dark:bg-gray-900',
+          'border border-slate-100 dark:border-gray-800',
           sizeMap[size]
         )}
         role="dialog"
@@ -46,16 +54,16 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
         aria-labelledby="modal-title"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-800 flex-shrink-0">
+          <h2 id="modal-title" className="text-base font-semibold text-slate-900 dark:text-slate-100">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             aria-label="Close"
           >
-            <XMarkIcon className="h-5 w-5 text-gray-500" />
+            <XMarkIcon className="h-4.5 w-4.5 h-[18px] w-[18px]" />
           </button>
         </div>
 
@@ -64,7 +72,7 @@ export default function Modal({ open, onClose, title, children, size = 'md', foo
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+          <div className="px-6 py-4 border-t border-slate-100 dark:border-gray-800 flex items-center justify-end gap-3 flex-shrink-0 bg-slate-50/50 dark:bg-gray-800/30 rounded-b-2xl">
             {footer}
           </div>
         )}
