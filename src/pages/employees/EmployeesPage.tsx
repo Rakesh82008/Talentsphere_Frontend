@@ -39,7 +39,7 @@ export default function EmployeesPage() {
   const [saving, setSaving] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<FormData>()
 
   const load = async () => {
     setLoading(true)
@@ -142,7 +142,11 @@ export default function EmployeesPage() {
       <Select label="Status" required options={[{value:'Active',label:'Active'},{value:'OnLeave',label:'On Leave'},{value:'Inactive',label:'Inactive'},{value:'Terminated',label:'Terminated'}]} {...register('status')} />
       <Select label="Manager (optional)" placeholder="No manager"
         options={users
-          .filter((u) => userRoles.some((ur) => Number(ur.userId) === Number(u.userID) && String(ur.roleName).toLowerCase() === 'manager'))
+          .filter((u) => {
+            const selfUserId = editEmployee ? editEmployee.userId : parseInt(watch('userId') || '0')
+            return Number(u.userID) !== selfUserId &&
+              userRoles.some((ur) => Number(ur.userId) === Number(u.userID) && String(ur.roleName).toLowerCase() === 'manager')
+          })
           .map((u) => ({ value: u.userID, label: u.name }))}
         {...register('managerID')} />
     </form>
