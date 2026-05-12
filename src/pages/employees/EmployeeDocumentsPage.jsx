@@ -1,3 +1,13 @@
+// Employee Documents Page
+//
+// Shows the list of documents for a single employee.
+// - HR / Admin users can review, verify, reject and send reminders.
+// - Employee users can upload and delete their own documents.
+//
+// The URL is either /employees/:id/documents (HR/Admin view) or
+// /my-documents (employee viewing their own). When :id is missing we
+// look up the logged-in user's employeeID via /employees/me.
+
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -10,9 +20,12 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline'
+import { format } from 'date-fns'
+
 import { employeesApi } from '../../api/employees'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
+
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import Select from '../../components/common/Select'
@@ -21,130 +34,222 @@ import ConfirmDialog from '../../components/common/ConfirmDialog'
 import StatusBadge from '../../components/common/StatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
-import { format } from 'date-fns'
 
-const DOC_TYPES = [
+// Allowed document types shown in the upload dropdown.
+const DOCUMENT_TYPE_OPTIONS = [
   { value: 'Resume', label: 'Resume' },
   { value: 'Certificate', label: 'Certificate' },
   { value: 'License', label: 'License' },
   { value: 'Identification', label: 'Identification' },
 ]
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
+// Base URL of the backend — used to build absolute links for files
+// stored on the server (when fileURI is a relative path).
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
 export default function EmployeeDocumentsPage() {
-  const { id } = useParams()
+  const { id: routeEmployeeId } = useParams()
   const navigate = useNavigate()
   const { isEmployee } = useAuth()
   const { can } = usePermissions()
 
-  const [empId, setEmpId] = useState(id ? parseInt(id) : null)
-  const [docs, setDocs] = useState([])
-  const [loading, setLoading] = useState(true)
+  // ID of the employee whose documents we are showing.
+  // For HR/Admin this comes from the URL. For an employee viewing
+  // their own page it is fetched from /employees/me inside useEffect.
+  const [employeeId, setEmployeeId] = useState(
+    routeEmployeeId ? parseInt(routeEmployeeId) : null
+  )
 
-  // Upload modal (employee only)
-  const [showUpload, setShowUpload] = useState(false)
-  const [docType, setDocType] = useState('Resume')
+  // The list of documents loaded from the server.
+  const [documents, setDocuments] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // ----- Upload modal state (employees only) -----
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [selectedDocType, setSelectedDocType] = useState('Resume')
   const [selectedFile, setSelectedFile] = useState(null)
-  const [uploading, setUploading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
 
-  // Verify / Reject (HR/Admin only)
-  const [verifyingId, setVerifyingId] = useState(null)
+  // ----- Verify / Reject state (HR/Admin only) -----
+  // Holds the ID of the document currently being verified so we can
+  // disable its action buttons while the request is in flight.
+  const [verifyingDocId, setVerifyingDocId] = useState(null)
 
-  // Delete
-  const [deleteId, setDeleteId] = useState(null)
-  const [deleting, setDeleting] = useState(false)
+  // ----- Delete confirmation state -----
+  const [docIdToDelete, setDocIdToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Reminder (HR/Admin only)
-  const [sendingReminder, setSendingReminder] = useState(false)
+  // ----- Send-reminder state (HR/Admin only) -----
+  const [isSendingReminder, setIsSendingReminder] = useState(false)
 
-  const load = async (resolvedEmpId) => {
-    setLoading(true)
+  // HR/Admin = anyone who is NOT an "employee" role.
+  // They can verify, reject and send reminders.
+  const isHRorAdmin = !isEmployee()
+
+  // -----------------------------------------------------------------
+  // API call: load the documents for the given employee.
+  // Called from useEffect on mount and after upload/delete actions.
+  // -----------------------------------------------------------------
+  const fetchDocuments = async (targetEmployeeId) => {
+    setIsLoading(true)
     try {
-      const data = await employeesApi.getDocsByEmployee(resolvedEmpId)
-      setDocs(data)
+      const data = await employeesApi.getDocsByEmployee(targetEmployeeId)
+      setDocuments(data)
     } catch {
       toast.error('Failed to load documents')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
+  // -----------------------------------------------------------------
+  // useEffect: runs once on mount (and again if the URL :id changes).
+  //
+  // Two cases:
+  //   1. We already have an employeeId from the URL — just fetch docs.
+  //   2. No :id in the URL (employee viewing their own page) — first
+  //      look up the logged-in user's employeeID, then fetch docs.
+  // -----------------------------------------------------------------
   useEffect(() => {
-    const init = async () => {
-      if (empId) { load(empId); return }
+    const initializePage = async () => {
+      if (employeeId) {
+        fetchDocuments(employeeId)
+        return
+      }
+
       try {
-        const me = await employeesApi.getMe()
-        setEmpId(me.employeeID)
-        load(me.employeeID)
+        const myEmployee = await employeesApi.getMe()
+        setEmployeeId(myEmployee.employeeID)
+        fetchDocuments(myEmployee.employeeID)
       } catch {
         toast.error('Could not load your employee profile')
-        setLoading(false)
+        setIsLoading(false)
       }
     }
-    init()
-  }, [id])
 
-  const onUpload = async () => {
-    if (!selectedFile || !empId) return
-    setUploading(true)
+    initializePage()
+    // We intentionally depend only on the URL :id. employeeId will be
+    // set inside the effect when it starts out null.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeEmployeeId])
+
+  // -----------------------------------------------------------------
+  // Handler: open the upload modal with a clean state.
+  // -----------------------------------------------------------------
+  const handleOpenUploadModal = () => {
+    setSelectedFile(null)
+    setSelectedDocType('Resume')
+    setIsUploadModalOpen(true)
+  }
+
+  // -----------------------------------------------------------------
+  // Handler: store the file the user picked from the file input.
+  // -----------------------------------------------------------------
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0] ?? null
+    setSelectedFile(file)
+  }
+
+  // -----------------------------------------------------------------
+  // Handler: upload the selected file to the server, then reload
+  // the document list so the new document appears.
+  // -----------------------------------------------------------------
+  const handleUpload = async () => {
+    if (!selectedFile || !employeeId) return
+
+    setIsUploading(true)
     try {
-      await employeesApi.uploadDocFile(empId, docType, selectedFile)
+      await employeesApi.uploadDocFile(employeeId, selectedDocType, selectedFile)
       toast.success('Document uploaded successfully')
-      setShowUpload(false)
+
+      // Reset the modal and refresh the list.
+      setIsUploadModalOpen(false)
       setSelectedFile(null)
-      setDocType('Resume')
-      load(empId)
+      setSelectedDocType('Resume')
+      fetchDocuments(employeeId)
     } catch {
       toast.error('Failed to upload document')
     } finally {
-      setUploading(false)
+      setIsUploading(false)
     }
   }
 
-  const onVerify = async (docId, status) => {
-    setVerifyingId(docId)
+  // -----------------------------------------------------------------
+  // Handler: mark a document as Verified or Rejected (HR/Admin only).
+  //
+  // We update the local "documents" state in place so the row updates
+  // immediately without needing to reload the entire list.
+  // -----------------------------------------------------------------
+  const handleVerify = async (documentId, newStatus) => {
+    setVerifyingDocId(documentId)
     try {
-      await employeesApi.updateDoc(docId, { verifyStatus: status })
-      toast.success(`Document ${status.toLowerCase()}`)
-      setDocs((prev) => prev.map((d) => d.documentID === docId ? { ...d, verifyStatus: status } : d))
+      await employeesApi.updateDoc(documentId, { verifyStatus: newStatus })
+      toast.success(`Document ${newStatus.toLowerCase()}`)
+
+      // Update just this one row in the documents array.
+      setDocuments((previousDocs) =>
+        previousDocs.map((doc) => {
+          if (doc.documentID === documentId) {
+            return { ...doc, verifyStatus: newStatus }
+          }
+          return doc
+        })
+      )
     } catch {
       toast.error('Failed to update document status')
     } finally {
-      setVerifyingId(null)
+      setVerifyingDocId(null)
     }
   }
 
-  const onDelete = async () => {
-    if (!deleteId || !empId) return
-    setDeleting(true)
+  // -----------------------------------------------------------------
+  // Handler: delete a document after the user confirms in the dialog.
+  // -----------------------------------------------------------------
+  const handleDelete = async () => {
+    if (!docIdToDelete || !employeeId) return
+
+    setIsDeleting(true)
     try {
-      await employeesApi.removeDoc(deleteId)
+      await employeesApi.removeDoc(docIdToDelete)
       toast.success('Document deleted')
-      setDeleteId(null)
-      load(empId)
+      setDocIdToDelete(null)
+      fetchDocuments(employeeId)
     } catch {
       toast.error('Failed to delete document')
     } finally {
-      setDeleting(false) }
+      setIsDeleting(false)
+    }
   }
 
-  const onSendReminder = async () => {
-    if (!empId) return
-    setSendingReminder(true)
+  // -----------------------------------------------------------------
+  // Handler: send the employee an email reminder to upload missing
+  // documents (HR/Admin only).
+  // -----------------------------------------------------------------
+  const handleSendReminder = async () => {
+    if (!employeeId) return
+
+    setIsSendingReminder(true)
     try {
-      await employeesApi.sendDocReminder(empId)
+      await employeesApi.sendDocReminder(employeeId)
       toast.success('Reminder sent to employee')
     } catch {
       toast.error('Failed to send reminder')
     } finally {
-      setSendingReminder(false)
+      setIsSendingReminder(false)
     }
   }
 
-  // HR/Admin can verify/delete; Employee can upload/delete their own
-  const isHR = !isEmployee()
+  // -----------------------------------------------------------------
+  // Helper: build the full file URL.
+  // If the server returns an absolute URL ("http...") use it as-is,
+  // otherwise prefix it with our API base URL.
+  // -----------------------------------------------------------------
+  const buildFileUrl = (fileURI) => {
+    if (!fileURI) return null
+    if (fileURI.startsWith('http')) return fileURI
+    return `${API_BASE_URL}${fileURI}`
+  }
 
   return (
     <div>
@@ -157,25 +262,30 @@ export default function EmployeeDocumentsPage() {
 
       <PageHeader
         title="Employee Documents"
-        subtitle={isEmployee() ? 'Upload and manage your documents' : 'Review and verify employee documents'}
+        subtitle={
+          isEmployee()
+            ? 'Upload and manage your documents'
+            : 'Review and verify employee documents'
+        }
         actions={
           <div className="flex gap-2">
-            {/* HR/Admin: send reminder, no upload */}
-            {isHR && empId && (
+            {/* HR/Admin: send a reminder email to the employee */}
+            {isHRorAdmin && employeeId && (
               <Button
                 variant="secondary"
                 leftIcon={<BellIcon className="h-4 w-4" />}
-                loading={sendingReminder}
-                onClick={onSendReminder}
+                loading={isSendingReminder}
+                onClick={handleSendReminder}
               >
                 Send Reminder
               </Button>
             )}
-            {/* Employee only: upload */}
+
+            {/* Employee: open the upload modal */}
             {isEmployee() && (
               <Button
                 leftIcon={<ArrowUpTrayIcon className="h-4 w-4" />}
-                onClick={() => { setSelectedFile(null); setDocType('Resume'); setShowUpload(true) }}
+                onClick={handleOpenUploadModal}
               >
                 Upload Document
               </Button>
@@ -185,12 +295,18 @@ export default function EmployeeDocumentsPage() {
       />
 
       <div className="card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-        ) : docs.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : documents.length === 0 ? (
           <EmptyState
             title="No documents uploaded"
-            description={isEmployee() ? 'Upload your documents using the button above.' : 'No documents have been uploaded for this employee.'}
+            description={
+              isEmployee()
+                ? 'Upload your documents using the button above.'
+                : 'No documents have been uploaded for this employee.'
+            }
           />
         ) : (
           <div className="overflow-x-auto">
@@ -205,47 +321,62 @@ export default function EmployeeDocumentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {docs.map((d) => {
-                  const fileUrl = d.fileURI?.startsWith('http') ? d.fileURI : `${API_BASE}${d.fileURI}`
+                {documents.map((doc) => {
+                  const fileUrl = buildFileUrl(doc.fileURI)
+                  const isPending = doc.verifyStatus === 'Pending'
+                  const isThisDocVerifying = verifyingDocId === doc.documentID
+                  const canDelete = can('MANAGE_EMPLOYEES') || isEmployee()
+
                   return (
-                    <tr key={d.documentID} className="hover:bg-gray-50">
+                    <tr key={doc.documentID} className="hover:bg-gray-50">
                       <td className="table-td font-medium">
                         <div className="flex items-center gap-2">
                           <DocumentIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                          {d.docType}
+                          {doc.docType}
                         </div>
                       </td>
+
                       <td className="table-td">
-                        {d.fileURI ? (
-                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+                        {fileUrl ? (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                          >
                             View File
                           </a>
                         ) : (
-                          <span className="text-gray-400 dark:text-slate-500 text-sm">No file</span>
+                          <span className="text-gray-400 dark:text-slate-500 text-sm">
+                            No file
+                          </span>
                         )}
                       </td>
+
                       <td className="table-td">
-                        <StatusBadge status={d.verifyStatus} />
+                        <StatusBadge status={doc.verifyStatus} />
                       </td>
+
                       <td className="table-td text-gray-500 dark:text-slate-400 text-sm">
-                        {format(new Date(d.createdAt), 'MMM d, yyyy')}
+                        {format(new Date(doc.createdAt), 'MMM d, yyyy')}
                       </td>
+
                       <td className="table-td">
                         <div className="flex items-center gap-1">
-                          {/* HR/Admin: Verify and Reject buttons — only on Pending docs */}
-                          {isHR && d.verifyStatus === 'Pending' && (
+                          {/* HR/Admin: Verify & Reject — only while Pending */}
+                          {isHRorAdmin && isPending && (
                             <>
                               <button
-                                onClick={() => onVerify(d.documentID, 'Verified')}
-                                disabled={verifyingId === d.documentID}
+                                onClick={() => handleVerify(doc.documentID, 'Verified')}
+                                disabled={isThisDocVerifying}
                                 className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg text-emerald-600 disabled:opacity-50 transition-colors"
                                 title="Verify"
                               >
                                 <CheckCircleIcon className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => onVerify(d.documentID, 'Rejected')}
-                                disabled={verifyingId === d.documentID}
+                                onClick={() => handleVerify(doc.documentID, 'Rejected')}
+                                disabled={isThisDocVerifying}
                                 className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 disabled:opacity-50 transition-colors"
                                 title="Reject"
                               >
@@ -253,10 +384,11 @@ export default function EmployeeDocumentsPage() {
                               </button>
                             </>
                           )}
-                          {/* Delete: Admin always, Employee for their own */}
-                          {(can('MANAGE_EMPLOYEES') || isEmployee()) && (
+
+                          {/* Delete: Admin always, Employee on their own docs */}
+                          {canDelete && (
                             <button
-                              onClick={() => setDeleteId(d.documentID)}
+                              onClick={() => setDocIdToDelete(doc.documentID)}
                               className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
                               title="Delete"
                             >
@@ -274,19 +406,21 @@ export default function EmployeeDocumentsPage() {
         )}
       </div>
 
-      {/* Upload Modal — only reachable by employees */}
+      {/* Upload Modal — only used by employees */}
       <Modal
-        open={showUpload}
-        onClose={() => setShowUpload(false)}
+        open={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
         title="Upload Document"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowUpload(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setIsUploadModalOpen(false)}>
+              Cancel
+            </Button>
             <Button
-              loading={uploading}
+              loading={isUploading}
               disabled={!selectedFile}
               leftIcon={<ArrowUpTrayIcon className="h-4 w-4" />}
-              onClick={onUpload}
+              onClick={handleUpload}
             >
               Upload
             </Button>
@@ -297,12 +431,17 @@ export default function EmployeeDocumentsPage() {
           <Select
             label="Document Type"
             required
-            options={DOC_TYPES}
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
+            options={DOCUMENT_TYPE_OPTIONS}
+            value={selectedDocType}
+            onChange={(event) => setSelectedDocType(event.target.value)}
           />
+
           <div>
-            <label className="form-label">File <span className="text-red-500">*</span></label>
+            <label className="form-label">
+              File <span className="text-red-500">*</span>
+            </label>
+
+            {/* Click the dashed box to open the hidden <input type="file" /> */}
             <div
               className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors"
               onClick={() => fileInputRef.current?.click()}
@@ -312,19 +451,28 @@ export default function EmployeeDocumentsPage() {
                 type="file"
                 className="hidden"
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                onChange={handleFileChange}
               />
+
               {selectedFile ? (
                 <div className="text-center">
                   <DocumentIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{selectedFile.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
+                    {(selectedFile.size / 1024).toFixed(1)} KB
+                  </p>
                 </div>
               ) : (
                 <div className="text-center">
                   <ArrowUpTrayIcon className="h-8 w-8 text-gray-400 dark:text-slate-500 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 dark:text-slate-400">Click to select a file</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">PDF, DOC, DOCX, JPG, PNG · Max 10 MB</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-400">
+                    Click to select a file
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                    PDF, DOC, DOCX, JPG, PNG · Max 10 MB
+                  </p>
                 </div>
               )}
             </div>
@@ -333,10 +481,10 @@ export default function EmployeeDocumentsPage() {
       </Modal>
 
       <ConfirmDialog
-        open={!!deleteId}
-        onClose={() => setDeleteId(null)}
-        onConfirm={onDelete}
-        loading={deleting}
+        open={!!docIdToDelete}
+        onClose={() => setDocIdToDelete(null)}
+        onConfirm={handleDelete}
+        loading={isDeleting}
         title="Delete Document"
         message="Are you sure you want to delete this document?"
       />

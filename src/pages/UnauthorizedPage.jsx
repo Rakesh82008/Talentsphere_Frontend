@@ -1,5 +1,15 @@
+// Unauthorized Page (403)
+//
+// Shown when ProtectedRoute determines that the logged-in user does
+// not have the role needed for the requested page. Pure presentation.
+
 import { useNavigate } from 'react-router-dom'
-import { ShieldExclamationIcon, ArrowLeftIcon, HomeIcon } from '@heroicons/react/24/outline'
+import {
+  ShieldExclamationIcon,
+  ArrowLeftIcon,
+  HomeIcon,
+} from '@heroicons/react/24/outline'
+
 import Button from '../components/common/Button'
 
 export default function UnauthorizedPage() {

@@ -1,6 +1,12 @@
+// 404 Not Found Page
+//
+// Catch-all route shown when the URL doesn't match any known route.
+// Pure presentation — no API calls, no state.
+
 import { useNavigate } from 'react-router-dom'
-import Button from '../components/common/Button'
 import { HomeIcon } from '@heroicons/react/24/outline'
+
+import Button from '../components/common/Button'
 
 export default function NotFoundPage() {
   const navigate = useNavigate()

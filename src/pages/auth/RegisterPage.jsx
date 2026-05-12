@@ -1,14 +1,22 @@
+// Register Page
+//
+// Public sign-up form for candidates. After a successful POST to the
+// register endpoint, the user is redirected to /login to sign in.
+// Server-side validation errors (under err.response.data.errors) are
+// surfaced to the user via toast.
+
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+
 import { authApi } from '../../api/auth'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
     register,
@@ -17,22 +25,37 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm()
 
-  const onSubmit = async (data) => {
-    setLoading(true)
+  // -----------------------------------------------------------------
+  // Handler: submit the registration form.
+  //
+  // The API can respond with either:
+  //   { message: '...' }                — simple error
+  //   { errors: { field: ['msg'] } }    — ASP.NET model validation
+  // We display the first message we find from either shape.
+  // -----------------------------------------------------------------
+  const handleRegister = async (formData) => {
+    setIsSubmitting(true)
     try {
-      await authApi.register({ name: data.name, email: data.email, password: data.password, phone: data.phone })
+      await authApi.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+      })
       toast.success('Account created! Please sign in.')
       navigate('/login')
-    } catch (err) {
-      const errData = err?.response?.data
-      if (errData?.errors) {
-        const first = Object.values(errData.errors).flat()[0]
-        toast.error(first ?? 'Registration failed')
+    } catch (error) {
+      const errorData = error?.response?.data
+
+      if (errorData?.errors) {
+        // ASP.NET ModelState validation shape — pick the first message.
+        const firstMessage = Object.values(errorData.errors).flat()[0]
+        toast.error(firstMessage ?? 'Registration failed')
       } else {
-        toast.error(errData?.message ?? 'Registration failed')
+        toast.error(errorData?.message ?? 'Registration failed')
       }
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -44,17 +67,23 @@ export default function RegisterPage() {
           <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-sm">TS</span>
           </div>
-          <span className="text-slate-900 dark:text-white font-bold text-lg">TalentSphere</span>
+          <span className="text-slate-900 dark:text-white font-bold text-lg">
+            TalentSphere
+          </span>
         </div>
 
         {/* Card */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-card p-6 sm:p-8">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Create your account</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Register as a candidate to start your application journey</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+              Create your account
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Register as a candidate to start your application journey
+            </p>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e) }} className="space-y-4">
+          <form onSubmit={handleSubmit(handleRegister)} className="space-y-4">
             <Input
               label="Full Name"
               placeholder="John Smith"
@@ -94,10 +123,17 @@ export default function RegisterPage() {
               hint="Must be at least 8 characters with one uppercase letter and one number"
               {...register('password', {
                 required: 'Password is required',
-                minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters',
+                },
                 validate: {
-                  hasUppercase: (v) => /[A-Z]/.test(v) || 'Password must contain at least one uppercase letter',
-                  hasNumber: (v) => /[0-9]/.test(v) || 'Password must contain at least one number',
+                  hasUppercase: (value) =>
+                    /[A-Z]/.test(value) ||
+                    'Password must contain at least one uppercase letter',
+                  hasNumber: (value) =>
+                    /[0-9]/.test(value) ||
+                    'Password must contain at least one number',
                 },
               })}
             />
@@ -110,11 +146,16 @@ export default function RegisterPage() {
               error={errors.confirmPassword?.message}
               {...register('confirmPassword', {
                 required: 'Please confirm your password',
-                validate: (v) => v === watch('password') || 'Passwords do not match',
+                validate: (value) =>
+                  value === watch('password') || 'Passwords do not match',
               })}
             />
 
-            <Button type="submit" loading={loading} className="w-full py-2.5 mt-2">
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              className="w-full py-2.5 mt-2"
+            >
               Create Account
             </Button>
           </form>
@@ -122,7 +163,10 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-5">
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+          <Link
+            to="/login"
+            className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+          >
             Sign In
           </Link>
         </p>

@@ -1,8 +1,16 @@
+// Profile Page
+//
+// Read-only view of the currently logged-in user's account info.
+// Pulls everything from the Redux auth slice via useAuth().
+
 import { useAuth } from '../../hooks/useAuth'
 import PageHeader from '../../components/common/PageHeader'
 
 export default function ProfilePage() {
   const { user } = useAuth()
+
+  // First letter of the user's name (used as a placeholder avatar).
+  const avatarInitial = user?.name?.[0] ?? '?'
 
   return (
     <div>
@@ -10,7 +18,9 @@ export default function ProfilePage() {
       <div className="card p-8 max-w-lg">
         <div className="flex items-center gap-5 mb-8">
           <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{user?.name?.[0] ?? '?'}</span>
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {avatarInitial}
+            </span>
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name}</h2>

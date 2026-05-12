@@ -1,7 +1,7 @@
 import api from './axios'
 
 export const screeningsApi = {
-  getAll: () => api.get('/screenings').then((r) => r.data),
+  getAll: () => api.get('/screenings').then((r) => r.data.data ?? r.data),
   getById: (id) => api.get(`/screenings/${id}`).then((r) => r.data),
   getByApplication: (applicationId) =>
     api.get(`/screenings/application/${applicationId}`).then((r) => r.data),

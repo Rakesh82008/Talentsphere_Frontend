@@ -1,8 +1,17 @@
+// Audits Page
+//
+// HR/Admin manages internal audit records — descriptions of audit
+// activity tied to an audit date and a status (Active / Completed /
+// Archived). For the system activity log, see AuditLogsPage.
+
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { format } from 'date-fns'
+
 import { auditsApi } from '../../api/audits'
+
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
@@ -12,69 +21,143 @@ import ConfirmDialog from '../../components/common/ConfirmDialog'
 import StatusBadge from '../../components/common/StatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
-import { format } from 'date-fns'
+
+const STATUS_OPTIONS = [
+  { value: 'Active', label: 'Active' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Archived', label: 'Archived' },
+]
+
+// Today's date in YYYY-MM-DD — used as the default for new audits.
+const getTodayDateString = () => new Date().toISOString().split('T')[0]
 
 export default function AuditsPage() {
+  // ----- List + loading -----
   const [audits, setAudits] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [editAudit, setEditAudit] = useState(null)
-  const [deleteId, setDeleteId] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm()
+  // ----- Modal state -----
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [auditBeingEdited, setAuditBeingEdited] = useState(null)
+  const [auditIdToDelete, setAuditIdToDelete] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    try { setAudits(await auditsApi.getAll()) }
-    catch { toast.error('Failed to load audits') }
-    finally { setLoading(false) }
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm()
+
+  // -----------------------------------------------------------------
+  // API call: load audits.
+  // -----------------------------------------------------------------
+  const fetchAudits = async () => {
+    setIsLoading(true)
+    try {
+      const auditsList = await auditsApi.getAll()
+      setAudits(auditsList)
+    } catch {
+      toast.error('Failed to load audits')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  useEffect(() => { load() }, [])
+  // useEffect: load on mount.
   useEffect(() => {
-    if (editAudit) reset({ description: editAudit.description, auditDate: editAudit.auditDate?.split('T')[0], status: editAudit.status })
-    else reset({ status: 'Active', auditDate: new Date().toISOString().split('T')[0] })
-  }, [editAudit, showCreate, reset])
+    fetchAudits()
+  }, [])
 
-  const onSubmit = async (data) => {
-    setSaving(true)
+  // useEffect: pre-fill the form for edit, defaults for create.
+  useEffect(() => {
+    if (auditBeingEdited) {
+      reset({
+        description: auditBeingEdited.description,
+        auditDate: auditBeingEdited.auditDate?.split('T')[0],
+        status: auditBeingEdited.status,
+      })
+    } else {
+      reset({ status: 'Active', auditDate: getTodayDateString() })
+    }
+  }, [auditBeingEdited, isCreateModalOpen, reset])
+
+  // -----------------------------------------------------------------
+  // Handler: open the create modal with sensible defaults.
+  // -----------------------------------------------------------------
+  const handleOpenCreateModal = () => {
+    reset({ status: 'Active', auditDate: getTodayDateString() })
+    setIsCreateModalOpen(true)
+  }
+
+  // -----------------------------------------------------------------
+  // Form submit — handles both create and edit.
+  // -----------------------------------------------------------------
+  const handleFormSubmit = async (formData) => {
+    setIsSaving(true)
     try {
-      if (editAudit) {
-        await auditsApi.update(editAudit.auditID, data)
+      if (auditBeingEdited) {
+        await auditsApi.update(auditBeingEdited.auditID, formData)
         toast.success('Audit updated')
-        setEditAudit(null)
+        setAuditBeingEdited(null)
       } else {
-        await auditsApi.create(data)
+        await auditsApi.create(formData)
         toast.success('Audit created')
-        setShowCreate(false)
+        setIsCreateModalOpen(false)
       }
-      load()
-    } catch { toast.error('Failed to save audit') }
-    finally { setSaving(false) }
+      fetchAudits()
+    } catch {
+      toast.error('Failed to save audit')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const onDelete = async () => {
-    if (!deleteId) return
-    setDeleting(true)
+  // -----------------------------------------------------------------
+  // Handler: delete after confirmation.
+  // -----------------------------------------------------------------
+  const handleDelete = async () => {
+    if (!auditIdToDelete) return
+
+    setIsDeleting(true)
     try {
-      await auditsApi.remove(deleteId)
+      await auditsApi.remove(auditIdToDelete)
       toast.success('Audit deleted')
-      setDeleteId(null)
-      load()
-    } catch { toast.error('Failed to delete audit') }
-    finally { setDeleting(false) }
+      setAuditIdToDelete(null)
+      fetchAudits()
+    } catch {
+      toast.error('Failed to delete audit')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
-  const AuditForm = () => (
+  // -----------------------------------------------------------------
+  // Reusable form (both modals).
+  // -----------------------------------------------------------------
+  const renderAuditForm = () => (
     <form className="space-y-4">
-      <div><label className="form-label">Description <span className="text-red-500">*</span></label>
-        <textarea className="input min-h-[80px]" {...register('description', { required: 'Description is required' })} />
-        {errors.description && <p className="form-error">{errors.description.message}</p>}
+      <div>
+        <label className="form-label">
+          Description <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          className="input min-h-[80px]"
+          {...register('description', { required: 'Description is required' })}
+        />
+        {errors.description && (
+          <p className="form-error">{errors.description.message}</p>
+        )}
       </div>
-      <Input label="Audit Date" type="date" required error={errors.auditDate?.message} {...register('auditDate', { required: 'Date is required' })} />
-      <Select label="Status" options={[{value:'Active',label:'Active'},{value:'Completed',label:'Completed'},{value:'Archived',label:'Archived'}]} {...register('status')} />
+      <Input
+        label="Audit Date"
+        type="date"
+        required
+        error={errors.auditDate?.message}
+        {...register('auditDate', { required: 'Date is required' })}
+      />
+      <Select label="Status" options={STATUS_OPTIONS} {...register('status')} />
     </form>
   )
 
@@ -83,14 +166,26 @@ export default function AuditsPage() {
       <PageHeader
         title="Audits"
         subtitle="Manage internal audit records and compliance activities"
-        actions={<Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => { reset({ status: 'Active', auditDate: new Date().toISOString().split('T')[0] }); setShowCreate(true) }}>New Audit</Button>}
+        actions={
+          <Button
+            leftIcon={<PlusIcon className="h-4 w-4" />}
+            onClick={handleOpenCreateModal}
+          >
+            New Audit
+          </Button>
+        }
       />
 
       <div className="card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
         ) : audits.length === 0 ? (
-          <EmptyState title="No audits" description="Create your first audit record." />
+          <EmptyState
+            title="No audits"
+            description="Create your first audit record."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -104,16 +199,36 @@ export default function AuditsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {audits.map((a) => (
-                  <tr key={a.auditID} className="hover:bg-gray-50">
-                    <td className="table-td font-medium max-w-xs truncate">{a.description}</td>
-                    <td className="table-td text-gray-600 dark:text-slate-400">{format(new Date(a.auditDate), 'MMM d, yyyy')}</td>
-                    <td className="table-td"><StatusBadge status={a.status} /></td>
-                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(a.createdAt), 'MMM d, yyyy')}</td>
+                {audits.map((audit) => (
+                  <tr key={audit.auditID} className="hover:bg-gray-50">
+                    <td className="table-td font-medium max-w-xs truncate">
+                      {audit.description}
+                    </td>
+                    <td className="table-td text-gray-600 dark:text-slate-400">
+                      {format(new Date(audit.auditDate), 'MMM d, yyyy')}
+                    </td>
+                    <td className="table-td">
+                      <StatusBadge status={audit.status} />
+                    </td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">
+                      {format(new Date(audit.createdAt), 'MMM d, yyyy')}
+                    </td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditAudit(a)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(a.auditID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                        <button
+                          onClick={() => setAuditBeingEdited(audit)}
+                          className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"
+                          title="Edit"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setAuditIdToDelete(audit.auditID)}
+                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"
+                          title="Delete"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -124,15 +239,50 @@ export default function AuditsPage() {
         )}
       </div>
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Audit"
-        footer={<><Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Create</Button></>}>
-        <AuditForm />
+      {/* Create modal */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="New Audit"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Create
+            </Button>
+          </>
+        }
+      >
+        {renderAuditForm()}
       </Modal>
-      <Modal open={!!editAudit} onClose={() => setEditAudit(null)} title="Edit Audit"
-        footer={<><Button variant="secondary" onClick={() => setEditAudit(null)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Save</Button></>}>
-        <AuditForm />
+
+      {/* Edit modal */}
+      <Modal
+        open={!!auditBeingEdited}
+        onClose={() => setAuditBeingEdited(null)}
+        title="Edit Audit"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setAuditBeingEdited(null)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        {renderAuditForm()}
       </Modal>
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} loading={deleting} />
+
+      <ConfirmDialog
+        open={!!auditIdToDelete}
+        onClose={() => setAuditIdToDelete(null)}
+        onConfirm={handleDelete}
+        loading={isDeleting}
+      />
     </div>
   )
 }

@@ -1,9 +1,18 @@
+// Screenings Page
+//
+// HR/Admin/Recruiter screen incoming applications. Each application
+// gets one screening row (Pending → Pass / Fail) plus optional feedback.
+// Only applications without an existing screening can have one created.
+
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { format } from 'date-fns'
+
 import { screeningsApi } from '../../api/screenings'
 import { applicationsApi } from '../../api/applications'
+
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import Select from '../../components/common/Select'
@@ -13,79 +22,200 @@ import StatusBadge from '../../components/common/StatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
 import SearchBar from '../../components/common/SearchBar'
-import { format } from 'date-fns'
+
+const RESULT_OPTIONS = [
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Pass', label: 'Pass' },
+  { value: 'Fail', label: 'Fail' },
+]
 
 export default function ScreeningsPage() {
+  // ----- List + dropdown data -----
   const [screenings, setScreenings] = useState([])
   const [applications, setApplications] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [editScreening, setEditScreening] = useState(null)
-  const [deleteId, setDeleteId] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm()
+  // ----- Search -----
+  const [searchText, setSearchText] = useState('')
 
-  const load = async () => {
-    setLoading(true)
+  // ----- Modal state -----
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [screeningBeingEdited, setScreeningBeingEdited] = useState(null)
+  const [screeningIdToDelete, setScreeningIdToDelete] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm()
+
+  // -----------------------------------------------------------------
+  // API call: load screenings + applications in parallel. Applications
+  // are needed so the "New Screening" modal can offer them in a dropdown.
+  // -----------------------------------------------------------------
+  const fetchScreenings = async () => {
+    setIsLoading(true)
     try {
-      const [s, a] = await Promise.allSettled([screeningsApi.getAll(), applicationsApi.getAll({ page: 1, pageSize: 100 })])
-      if (s.status === 'fulfilled') setScreenings(Array.isArray(s.value) ? s.value : [])
-      if (a.status === 'fulfilled') setApplications(a.value?.data ?? [])
-    } catch { toast.error('Failed to load screenings') }
-    finally { setLoading(false) }
-  }
+      const [screeningsResult, applicationsResult] = await Promise.allSettled([
+        screeningsApi.getAll(),
+        applicationsApi.getAll({ page: 1, pageSize: 100 }),
+      ])
 
-  useEffect(() => { load() }, [])
-  useEffect(() => {
-    if (editScreening) reset({ applicationID: String(editScreening.applicationID), result: editScreening.result, feedback: editScreening.feedback ?? '' })
-    else reset({ result: 'Pending' })
-  }, [editScreening, showCreate, reset])
-
-  const onSubmit = async (data) => {
-    setSaving(true)
-    try {
-      if (editScreening) {
-        await screeningsApi.update(editScreening.screeningID, { result: data.result, feedback: data.feedback })
-        toast.success('Screening updated')
-        setEditScreening(null)
-      } else {
-        await screeningsApi.create({ applicationID: parseInt(data.applicationID), result: data.result, feedback: data.feedback })
-        toast.success('Screening created')
-        setShowCreate(false)
+      if (screeningsResult.status === 'fulfilled') {
+        const value = screeningsResult.value
+        setScreenings(Array.isArray(value) ? value : [])
       }
-      load()
-    } catch { toast.error('Failed to save screening') }
-    finally { setSaving(false) }
+      if (applicationsResult.status === 'fulfilled') {
+        setApplications(applicationsResult.value?.data ?? [])
+      }
+    } catch {
+      toast.error('Failed to load screenings')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const onDelete = async () => {
-    if (!deleteId) return
-    setDeleting(true)
+  // useEffect: load all data once on mount.
+  useEffect(() => {
+    fetchScreenings()
+  }, [])
+
+  // useEffect: pre-fill the form when opening edit, or use defaults
+  // when opening create.
+  useEffect(() => {
+    if (screeningBeingEdited) {
+      reset({
+        applicationID: String(screeningBeingEdited.applicationID),
+        result: screeningBeingEdited.result,
+        feedback: screeningBeingEdited.feedback ?? '',
+      })
+    } else {
+      reset({ result: 'Pending' })
+    }
+  }, [screeningBeingEdited, isCreateModalOpen, reset])
+
+  // -----------------------------------------------------------------
+  // Handler: open the "New Screening" modal.
+  // -----------------------------------------------------------------
+  const handleOpenCreateModal = () => {
+    reset({ result: 'Pending' })
+    setIsCreateModalOpen(true)
+  }
+
+  // -----------------------------------------------------------------
+  // Form submit — handles both create and edit.
+  // -----------------------------------------------------------------
+  const handleFormSubmit = async (formData) => {
+    setIsSaving(true)
     try {
-      await screeningsApi.remove(deleteId)
-      toast.success('Screening deleted')
-      setDeleteId(null)
-      load()
-    } catch { toast.error('Failed to delete screening') }
-    finally { setDeleting(false) }
+      if (screeningBeingEdited) {
+        // Edit: cannot change which application a screening belongs to.
+        await screeningsApi.update(screeningBeingEdited.screeningID, {
+          result: formData.result,
+          feedback: formData.feedback,
+        })
+        toast.success('Screening updated')
+        setScreeningBeingEdited(null)
+      } else {
+        await screeningsApi.create({
+          applicationID: parseInt(formData.applicationID),
+          result: formData.result,
+          feedback: formData.feedback,
+        })
+        toast.success('Screening created')
+        setIsCreateModalOpen(false)
+      }
+
+      fetchScreenings()
+    } catch {
+      toast.error('Failed to save screening')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const filtered = screenings.filter((s) =>
-    !search || s.candidateName?.toLowerCase().includes(search.toLowerCase()) || s.jobTitle?.toLowerCase().includes(search.toLowerCase())
-  )
+  // -----------------------------------------------------------------
+  // Handler: delete a screening after the user confirms.
+  // -----------------------------------------------------------------
+  const handleDelete = async () => {
+    if (!screeningIdToDelete) return
 
-  const ScreenForm = () => (
+    setIsDeleting(true)
+    try {
+      await screeningsApi.remove(screeningIdToDelete)
+      toast.success('Screening deleted')
+      setScreeningIdToDelete(null)
+      fetchScreenings()
+    } catch {
+      toast.error('Failed to delete screening')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Filter by candidate name or job title.
+  const filteredScreenings = screenings.filter((screening) => {
+    if (!searchText) return true
+    const lowerSearch = searchText.toLowerCase()
+    return (
+      screening.candidateName?.toLowerCase().includes(lowerSearch) ||
+      screening.jobTitle?.toLowerCase().includes(lowerSearch)
+    )
+  })
+
+  // -----------------------------------------------------------------
+  // Eligible applications for a NEW screening: status must be Submitted
+  // or Reviewed, and they must not already have a screening row.
+  // -----------------------------------------------------------------
+  const eligibleApplicationOptions = applications
+    .filter((application) => {
+      const hasEligibleStatus = ['Submitted', 'Reviewed'].includes(
+        application.status
+      )
+      if (!hasEligibleStatus) return false
+
+      const alreadyScreened = screenings.some(
+        (screening) => screening.applicationID === application.applicationID
+      )
+      return !alreadyScreened
+    })
+    .map((application) => {
+      const candidateLabel = application.candidateName ?? 'Candidate'
+      const jobLabel = application.jobTitle ?? `Job #${application.jobID}`
+      return {
+        value: application.applicationID,
+        label: `${candidateLabel} — ${jobLabel} (${application.status})`,
+      }
+    })
+
+  // -----------------------------------------------------------------
+  // Render the create/edit form (used by both modals).
+  // -----------------------------------------------------------------
+  const renderScreeningForm = () => (
     <form className="space-y-4">
-      {!editScreening && (
-        <Select label="Application" required placeholder="Select application" error={errors.applicationID?.message}
-          options={applications.map((a) => ({ value: a.applicationID, label: `${a.candidateName ?? 'Candidate'} — ${a.jobTitle ?? 'Job #' + a.jobID}` }))}
-          {...register('applicationID', { required: 'Application is required' })} />
+      {/* Application field only shown in Create mode */}
+      {!screeningBeingEdited && (
+        <Select
+          label="Application"
+          required
+          placeholder="Select application"
+          error={errors.applicationID?.message}
+          options={eligibleApplicationOptions}
+          {...register('applicationID', { required: 'Application is required' })}
+        />
       )}
-      <Select label="Result" required options={[{value:'Pending',label:'Pending'},{value:'Pass',label:'Pass'},{value:'Fail',label:'Fail'}]}
-        error={errors.result?.message} {...register('result', { required: true })} />
+
+      <Select
+        label="Result"
+        required
+        options={RESULT_OPTIONS}
+        error={errors.result?.message}
+        {...register('result', { required: true })}
+      />
+
       <div>
         <label className="form-label">Feedback</label>
         <textarea className="input min-h-[80px]" {...register('feedback')} />
@@ -98,18 +228,35 @@ export default function ScreeningsPage() {
       <PageHeader
         title="Screening"
         subtitle="Review and screen job applications"
-        actions={<Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => { reset({ result: 'Pending' }); setShowCreate(true) }}>New Screening</Button>}
+        actions={
+          <Button
+            leftIcon={<PlusIcon className="h-4 w-4" />}
+            onClick={handleOpenCreateModal}
+          >
+            New Screening
+          </Button>
+        }
       />
 
       <div className="card overflow-hidden">
         <div className="p-4 border-b border-gray-200">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search by candidate or job…" className="w-80" />
+          <SearchBar
+            value={searchText}
+            onChange={setSearchText}
+            placeholder="Search by candidate or job…"
+            className="w-80"
+          />
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-        ) : filtered.length === 0 ? (
-          <EmptyState title="No screenings yet" description="Start screening applications." />
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : filteredScreenings.length === 0 ? (
+          <EmptyState
+            title="No screenings yet"
+            description="Start screening applications."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -124,17 +271,38 @@ export default function ScreeningsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((s) => (
-                  <tr key={s.screeningID} className="hover:bg-gray-50">
-                    <td className="table-td font-medium">{s.candidateName ?? `Application #${s.applicationID}`}</td>
-                    <td className="table-td">{s.jobTitle ?? '—'}</td>
-                    <td className="table-td"><StatusBadge status={s.result} /></td>
-                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">{s.feedback ?? '—'}</td>
-                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(s.createdAt), 'MMM d, yyyy')}</td>
+                {filteredScreenings.map((screening) => (
+                  <tr key={screening.screeningID} className="hover:bg-gray-50">
+                    <td className="table-td font-medium">
+                      {screening.candidateName ??
+                        `Application #${screening.applicationID}`}
+                    </td>
+                    <td className="table-td">{screening.jobTitle ?? '—'}</td>
+                    <td className="table-td">
+                      <StatusBadge status={screening.result} />
+                    </td>
+                    <td className="table-td text-gray-500 dark:text-slate-400 max-w-xs truncate">
+                      {screening.feedback ?? '—'}
+                    </td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">
+                      {format(new Date(screening.createdAt), 'MMM d, yyyy')}
+                    </td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditScreening(s)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(s.screeningID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                        <button
+                          onClick={() => setScreeningBeingEdited(screening)}
+                          className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"
+                          title="Edit"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setScreeningIdToDelete(screening.screeningID)}
+                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"
+                          title="Delete"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -145,15 +313,50 @@ export default function ScreeningsPage() {
         )}
       </div>
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Screening"
-        footer={<><Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Save</Button></>}>
-        <ScreenForm />
+      {/* Create modal */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="New Screening"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        {renderScreeningForm()}
       </Modal>
-      <Modal open={!!editScreening} onClose={() => setEditScreening(null)} title="Edit Screening"
-        footer={<><Button variant="secondary" onClick={() => setEditScreening(null)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Update</Button></>}>
-        <ScreenForm />
+
+      {/* Edit modal */}
+      <Modal
+        open={!!screeningBeingEdited}
+        onClose={() => setScreeningBeingEdited(null)}
+        title="Edit Screening"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setScreeningBeingEdited(null)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Update
+            </Button>
+          </>
+        }
+      >
+        {renderScreeningForm()}
       </Modal>
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} loading={deleting} />
+
+      <ConfirmDialog
+        open={!!screeningIdToDelete}
+        onClose={() => setScreeningIdToDelete(null)}
+        onConfirm={handleDelete}
+        loading={isDeleting}
+      />
     </div>
   )
 }

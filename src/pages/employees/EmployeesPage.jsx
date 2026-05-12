@@ -1,10 +1,24 @@
+// Employees Page
+//
+// Two routes share this component:
+//   - /employees → HR/Admin sees all employees, can create/edit/delete.
+//   - /my-team   → Manager sees only their direct reports (read-only).
+//
+// The "Add Employee" form links an existing user account to an
+// Employee record and optionally assigns a Manager.
+
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { PlusIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { format } from 'date-fns'
+
 import { employeesApi } from '../../api/employees'
 import { usersApi } from '../../api/users'
+import { usePermissions } from '../../hooks/usePermissions'
+import { useAuth } from '../../hooks/useAuth'
+
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
@@ -15,161 +29,330 @@ import StatusBadge from '../../components/common/StatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
 import SearchBar from '../../components/common/SearchBar'
-import { usePermissions } from '../../hooks/usePermissions'
-import { useAuth } from '../../hooks/useAuth'
-import { format } from 'date-fns'
+
+// Status dropdown options.
+const STATUS_OPTIONS = [
+  { value: 'Active', label: 'Active' },
+  { value: 'OnLeave', label: 'On Leave' },
+  { value: 'Inactive', label: 'Inactive' },
+  { value: 'Terminated', label: 'Terminated' },
+]
 
 export default function EmployeesPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const isMyTeam = location.pathname === '/my-team'
   const { can } = usePermissions()
   const { user } = useAuth()
+
+  const isMyTeamView = location.pathname === '/my-team'
+  const canManageEmployees = can('MANAGE_EMPLOYEES')
+
+  // ----- List + dropdown data -----
   const [employees, setEmployees] = useState([])
   const [users, setUsers] = useState([])
   const [userRoles, setUserRoles] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [editEmployee, setEditEmployee] = useState(null)
-  const [deleteId, setDeleteId] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm()
+  // ----- Search -----
+  const [searchText, setSearchText] = useState('')
 
-  const load = async () => {
-    setLoading(true)
+  // ----- Modal state -----
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [employeeBeingEdited, setEmployeeBeingEdited] = useState(null)
+  const [employeeIdToDelete, setEmployeeIdToDelete] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm()
+
+  // -----------------------------------------------------------------
+  // API call: load employees, and (when not in My Team view) also the
+  // full user + user-role lists used by the add/edit form.
+  // -----------------------------------------------------------------
+  const fetchEmployees = async () => {
+    setIsLoading(true)
     try {
-      if (isMyTeam) {
-        const allEmps = await employeesApi.getAll()
-        setEmployees(user ? allEmps.filter((e) => e.managerID === user.userId) : [])
+      if (isMyTeamView) {
+        // Manager: load everyone, then filter client-side to their reports.
+        const allEmployees = await employeesApi.getAll()
+        const myReports = user
+          ? allEmployees.filter((employee) => employee.managerID === user.userId)
+          : []
+        setEmployees(myReports)
       } else {
-        const [eRes, uRes, urRes] = await Promise.allSettled([
-          employeesApi.getAll(),
-          usersApi.getAll(),
-          usersApi.getUserRoles(),
-        ])
-        if (eRes.status === 'fulfilled') setEmployees(eRes.value)
-        else toast.error('Failed to load employees')
-        if (uRes.status === 'fulfilled') setUsers(uRes.value)
-        if (urRes.status === 'fulfilled') setUserRoles(urRes.value)
+        // HR/Admin: load employees + supporting data for the form.
+        const [employeesResult, usersResult, userRolesResult] =
+          await Promise.allSettled([
+            employeesApi.getAll(),
+            usersApi.getAll(),
+            usersApi.getUserRoles(),
+          ])
+
+        if (employeesResult.status === 'fulfilled') {
+          setEmployees(employeesResult.value)
+        } else {
+          toast.error('Failed to load employees')
+        }
+        if (usersResult.status === 'fulfilled') {
+          setUsers(usersResult.value)
+        }
+        if (userRolesResult.status === 'fulfilled') {
+          setUserRoles(userRolesResult.value)
+        }
       }
-    } catch { toast.error('Failed to load employees') }
-    finally { setLoading(false) }
+    } catch {
+      toast.error('Failed to load employees')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  useEffect(() => { load() }, [isMyTeam])
-
+  // useEffect: reload whenever the URL switches between /employees and /my-team.
   useEffect(() => {
-    if (editEmployee) {
+    fetchEmployees()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMyTeamView])
+
+  // -----------------------------------------------------------------
+  // useEffect: pre-fill the form when the user opens edit, or reset
+  // to defaults when opening "Add New".
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    if (employeeBeingEdited) {
       reset({
-        userId: String(editEmployee.userId),
-        name: editEmployee.name,
-        department: editEmployee.department,
-        position: editEmployee.position,
-        joinDate: editEmployee.joinDate?.split('T')[0],
-        status: editEmployee.status,
-        managerID: String(editEmployee.managerID ?? ''),
+        userId: String(employeeBeingEdited.userId),
+        name: employeeBeingEdited.name,
+        department: employeeBeingEdited.department,
+        position: employeeBeingEdited.position,
+        // Server gives ISO datetime; <input type="date"> wants YYYY-MM-DD.
+        joinDate: employeeBeingEdited.joinDate?.split('T')[0],
+        status: employeeBeingEdited.status,
+        managerID: String(employeeBeingEdited.managerID ?? ''),
       })
     } else {
       reset({ status: 'Active' })
     }
-  }, [editEmployee, showCreate, reset])
+  }, [employeeBeingEdited, isCreateModalOpen, reset])
 
-  const onSubmit = async (data) => {
-    setSaving(true)
+  // -----------------------------------------------------------------
+  // Handler: open the "Add Employee" modal with default values.
+  // -----------------------------------------------------------------
+  const handleOpenCreateModal = () => {
+    reset({ status: 'Active' })
+    setIsCreateModalOpen(true)
+  }
+
+  // -----------------------------------------------------------------
+  // Form submit — handles both create and edit because the same form
+  // is rendered inside both modals.
+  // -----------------------------------------------------------------
+  const handleFormSubmit = async (formData) => {
+    setIsSaving(true)
     try {
       const payload = {
-        userId: parseInt(data.userId),
-        name: data.name,
-        department: data.department,
-        position: data.position,
-        joinDate: data.joinDate,
-        status: data.status,
-        managerID: data.managerID ? parseInt(data.managerID) : undefined,
+        userId: parseInt(formData.userId),
+        name: formData.name,
+        department: formData.department,
+        position: formData.position,
+        joinDate: formData.joinDate,
+        status: formData.status,
+        managerID: formData.managerID ? parseInt(formData.managerID) : undefined,
       }
-      if (editEmployee) {
-        await employeesApi.update(editEmployee.employeeID, payload)
+
+      if (employeeBeingEdited) {
+        await employeesApi.update(employeeBeingEdited.employeeID, payload)
         toast.success('Employee updated')
-        setEditEmployee(null)
+        setEmployeeBeingEdited(null)
       } else {
         await employeesApi.create(payload)
         toast.success('Employee created')
-        setShowCreate(false)
+        setIsCreateModalOpen(false)
       }
-      load()
-    } catch { toast.error(editEmployee ? 'Failed to update employee' : 'Failed to create employee') }
-    finally { setSaving(false) }
+
+      fetchEmployees()
+    } catch {
+      const errorMessage = employeeBeingEdited
+        ? 'Failed to update employee'
+        : 'Failed to create employee'
+      toast.error(errorMessage)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const onDelete = async () => {
-    if (!deleteId) return
-    setDeleteLoading(true)
+  // -----------------------------------------------------------------
+  // Handler: delete an employee after the user confirms.
+  // -----------------------------------------------------------------
+  const handleDelete = async () => {
+    if (!employeeIdToDelete) return
+
+    setIsDeleting(true)
     try {
-      await employeesApi.remove(deleteId)
+      await employeesApi.remove(employeeIdToDelete)
       toast.success('Employee removed')
-      setDeleteId(null)
-      load()
-    } catch { toast.error('Failed to delete employee') }
-    finally { setDeleteLoading(false) }
+      setEmployeeIdToDelete(null)
+      fetchEmployees()
+    } catch {
+      toast.error('Failed to delete employee')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase()) ||
-    e.department.toLowerCase().includes(search.toLowerCase()) ||
-    e.position.toLowerCase().includes(search.toLowerCase())
-  )
+  // -----------------------------------------------------------------
+  // Filter the list by the search box (matches name, dept or position).
+  // -----------------------------------------------------------------
+  const filteredEmployees = employees.filter((employee) => {
+    const lowerSearch = searchText.toLowerCase()
+    return (
+      employee.name.toLowerCase().includes(lowerSearch) ||
+      employee.department.toLowerCase().includes(lowerSearch) ||
+      employee.position.toLowerCase().includes(lowerSearch)
+    )
+  })
 
-  const EmployeeForm = () => (
+  // -----------------------------------------------------------------
+  // Build dropdown options for the form.
+  // - "User Account": users that don't already have an employee record.
+  // - "Manager": users with the Manager role, excluding the selected user.
+  // -----------------------------------------------------------------
+  const availableUserOptions = users
+    .filter((u) => !employees.some((employee) => employee.userId === u.userID))
+    .map((u) => ({ value: u.userID, label: `${u.name} (${u.email})` }))
+
+  const watchedUserId = watch('userId')
+  const selectedUserId = employeeBeingEdited
+    ? employeeBeingEdited.userId
+    : parseInt(watchedUserId || '0')
+
+  const managerOptions = users
+    .filter((u) => {
+      // Exclude the currently selected user (can't manage themselves).
+      if (Number(u.userID) === selectedUserId) return false
+
+      // Only include users who have the Manager role assigned.
+      return userRoles.some((userRole) => {
+        const isSameUser = Number(userRole.userId) === Number(u.userID)
+        const isManager =
+          String(userRole.roleName).toLowerCase() === 'manager'
+        return isSameUser && isManager
+      })
+    })
+    .map((u) => ({ value: u.userID, label: u.name }))
+
+  // -----------------------------------------------------------------
+  // Render the create/edit form. Defined as a render function so it
+  // can be reused inside both the Create and Edit modals.
+  // -----------------------------------------------------------------
+  const renderEmployeeForm = () => (
     <form className="space-y-4">
-      {!editEmployee && (
-        <Select label="User Account" required placeholder="Link to user account" error={errors.userId?.message}
-          options={users
-            .filter((u) => !employees.some((e) => e.userId === u.userID))
-            .map((u) => ({ value: u.userID, label: `${u.name} (${u.email})` }))}
-          {...register('userId', { required: 'User is required' })} />
+      {/* Linking to a user account is only shown in Create mode */}
+      {!employeeBeingEdited && (
+        <Select
+          label="User Account"
+          required
+          placeholder="Link to user account"
+          error={errors.userId?.message}
+          options={availableUserOptions}
+          {...register('userId', { required: 'User is required' })}
+        />
       )}
+
       <div className="grid grid-cols-2 gap-4">
-        <Input label="Full Name" required error={errors.name?.message} {...register('name', { required: 'Name is required' })} />
-        <Input label="Department" required error={errors.department?.message} {...register('department', { required: 'Department is required' })} />
-        <Input label="Position / Job Title" required error={errors.position?.message} {...register('position', { required: 'Position is required' })} />
-        <Input label="Join Date" type="date" required error={errors.joinDate?.message} {...register('joinDate', { required: 'Join date is required' })} />
+        <Input
+          label="Full Name"
+          required
+          error={errors.name?.message}
+          {...register('name', { required: 'Name is required' })}
+        />
+        <Input
+          label="Department"
+          required
+          error={errors.department?.message}
+          {...register('department', { required: 'Department is required' })}
+        />
+        <Input
+          label="Position / Job Title"
+          required
+          error={errors.position?.message}
+          {...register('position', { required: 'Position is required' })}
+        />
+        <Input
+          label="Join Date"
+          type="date"
+          required
+          error={errors.joinDate?.message}
+          {...register('joinDate', { required: 'Join date is required' })}
+        />
       </div>
-      <Select label="Status" required options={[{value:'Active',label:'Active'},{value:'OnLeave',label:'On Leave'},{value:'Inactive',label:'Inactive'},{value:'Terminated',label:'Terminated'}]} {...register('status')} />
-      <Select label="Manager (optional)" placeholder="No manager"
-        options={users
-          .filter((u) => {
-            const selfUserId = editEmployee ? editEmployee.userId : parseInt(watch('userId') || '0')
-            return Number(u.userID) !== selfUserId &&
-              userRoles.some((ur) => Number(ur.userId) === Number(u.userID) && String(ur.roleName).toLowerCase() === 'manager')
-          })
-          .map((u) => ({ value: u.userID, label: u.name }))}
-        {...register('managerID')} />
+
+      <Select
+        label="Status"
+        required
+        options={STATUS_OPTIONS}
+        {...register('status')}
+      />
+
+      <Select
+        label="Manager (optional)"
+        placeholder="No manager"
+        options={managerOptions}
+        {...register('managerID')}
+      />
     </form>
   )
 
   return (
     <div>
       <PageHeader
-        title={isMyTeam ? 'My Team' : 'Employees'}
-        subtitle={isMyTeam ? 'Employees reporting to you' : 'Manage your workforce'}
-        actions={!isMyTeam && can('MANAGE_EMPLOYEES') && (
-          <Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => { reset({ status: 'Active' }); setShowCreate(true) }}>
-            Add Employee
-          </Button>
-        )}
+        title={isMyTeamView ? 'My Team' : 'Employees'}
+        subtitle={
+          isMyTeamView
+            ? 'Employees reporting to you'
+            : 'Manage your workforce'
+        }
+        actions={
+          !isMyTeamView &&
+          canManageEmployees && (
+            <Button
+              leftIcon={<PlusIcon className="h-4 w-4" />}
+              onClick={handleOpenCreateModal}
+            >
+              Add Employee
+            </Button>
+          )
+        }
       />
 
       <div className="card overflow-hidden">
         <div className="p-4 border-b border-gray-200">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search by name, department, position…" className="w-80" />
+          <SearchBar
+            value={searchText}
+            onChange={setSearchText}
+            placeholder="Search by name, department, position…"
+            className="w-80"
+          />
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-        ) : filtered.length === 0 ? (
-          <EmptyState title="No employees found" description={isMyTeam ? 'No employees are currently reporting to you.' : 'Add your first employee to get started.'} />
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <EmptyState
+            title="No employees found"
+            description={
+              isMyTeamView
+                ? 'No employees are currently reporting to you.'
+                : 'Add your first employee to get started.'
+            }
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -184,31 +367,56 @@ export default function EmployeesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((e) => (
-                  <tr key={e.employeeID} className="hover:bg-gray-50">
+                {filteredEmployees.map((employee) => (
+                  <tr key={employee.employeeID} className="hover:bg-gray-50">
                     <td className="table-td">
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-slate-100">{e.name}</p>
-                        {e.managerName && <p className="text-xs text-gray-400 dark:text-slate-500">Mgr: {e.managerName}</p>}
+                        <p className="font-medium text-gray-900 dark:text-slate-100">
+                          {employee.name}
+                        </p>
+                        {employee.managerName && (
+                          <p className="text-xs text-gray-400 dark:text-slate-500">
+                            Mgr: {employee.managerName}
+                          </p>
+                        )}
                       </div>
                     </td>
-                    <td className="table-td">{e.department}</td>
-                    <td className="table-td">{e.position}</td>
-                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(e.joinDate), 'MMM d, yyyy')}</td>
-                    <td className="table-td"><StatusBadge status={e.status} /></td>
+                    <td className="table-td">{employee.department}</td>
+                    <td className="table-td">{employee.position}</td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">
+                      {format(new Date(employee.joinDate), 'MMM d, yyyy')}
+                    </td>
+                    <td className="table-td">
+                      <StatusBadge status={employee.status} />
+                    </td>
                     <td className="table-td">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => navigate(`/employees/${e.employeeID}`)} className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors" title="View">
+                        <button
+                          onClick={() => navigate(`/employees/${employee.employeeID}`)}
+                          className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-blue-500 transition-colors"
+                          title="View"
+                        >
                           <EyeIcon className="h-4 w-4" />
                         </button>
-                        {can('MANAGE_EMPLOYEES') && <>
-                          <button onClick={() => setEditEmployee(e)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500 transition-colors" title="Edit">
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => setDeleteId(e.employeeID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors" title="Delete">
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </>}
+
+                        {canManageEmployees && (
+                          <>
+                            <button
+                              onClick={() => setEmployeeBeingEdited(employee)}
+                              className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500 transition-colors"
+                              title="Edit"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setEmployeeIdToDelete(employee.employeeID)}
+                              className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 transition-colors"
+                              title="Delete"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -219,18 +427,54 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add New Employee" size="lg"
-        footer={<><Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Create Employee</Button></>}>
-        <EmployeeForm />
+      {/* Create modal */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Add New Employee"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Create Employee
+            </Button>
+          </>
+        }
+      >
+        {renderEmployeeForm()}
       </Modal>
 
-      <Modal open={!!editEmployee} onClose={() => setEditEmployee(null)} title="Edit Employee" size="lg"
-        footer={<><Button variant="secondary" onClick={() => setEditEmployee(null)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Save Changes</Button></>}>
-        <EmployeeForm />
+      {/* Edit modal */}
+      <Modal
+        open={!!employeeBeingEdited}
+        onClose={() => setEmployeeBeingEdited(null)}
+        title="Edit Employee"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEmployeeBeingEdited(null)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Save Changes
+            </Button>
+          </>
+        }
+      >
+        {renderEmployeeForm()}
       </Modal>
 
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} loading={deleteLoading}
-        title="Remove Employee" message="Are you sure you want to remove this employee? This action cannot be undone." />
+      <ConfirmDialog
+        open={!!employeeIdToDelete}
+        onClose={() => setEmployeeIdToDelete(null)}
+        onConfirm={handleDelete}
+        loading={isDeleting}
+        title="Remove Employee"
+        message="Are you sure you want to remove this employee? This action cannot be undone."
+      />
     </div>
   )
 }

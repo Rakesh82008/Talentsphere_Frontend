@@ -1,8 +1,8 @@
 import api from './axios'
 
 export const interviewsApi = {
-  getAll: () => api.get('/interviews').then((r) => r.data),
-  getDetailed: () => api.get('/interviews/detailed').then((r) => r.data),
+  getAll: () => api.get('/interviews').then((r) => r.data.data ?? r.data),
+  getDetailed: () => api.get('/interviews/detailed').then((r) => r.data.data ?? r.data),
   getById: (id) => api.get(`/interviews/${id}`).then((r) => r.data),
   getByApplication: (applicationId) =>
     api.get(`/interviews/application/${applicationId}`).then((r) => r.data),

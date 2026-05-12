@@ -1,9 +1,17 @@
+// Login Page
+//
+// Public page where users sign in. On success the user is redirected
+// either to the page they were trying to reach before being sent here,
+// or to the dashboard ("/") if they came in directly.
+
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+
 import { useAppDispatch } from '../../store'
 import { login, clearError } from '../../store/slices/authSlice'
 import { useAuth } from '../../hooks/useAuth'
+
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 
@@ -13,7 +21,9 @@ export default function LoginPage() {
   const location = useLocation()
   const { isAuthenticated, isLoading, error } = useAuth()
 
-  const from = location.state?.from?.pathname ?? '/'
+  // If the user landed here from a protected route, that route is
+  // stored in location.state.from. Otherwise default to the dashboard.
+  const redirectTo = location.state?.from?.pathname ?? '/'
 
   const {
     register,
@@ -21,13 +31,25 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm()
 
+  // -----------------------------------------------------------------
+  // useEffect: once the user is authenticated, redirect them away.
+  // Also clear any leftover error message when leaving the page.
+  // -----------------------------------------------------------------
   useEffect(() => {
-    if (isAuthenticated) navigate(from, { replace: true })
-    return () => { dispatch(clearError()) }
-  }, [isAuthenticated, navigate, from, dispatch])
+    if (isAuthenticated) {
+      navigate(redirectTo, { replace: true })
+    }
+    return () => {
+      dispatch(clearError())
+    }
+  }, [isAuthenticated, navigate, redirectTo, dispatch])
 
-  const onSubmit = (data) => {
-    dispatch(login(data))
+  // -----------------------------------------------------------------
+  // Handler: submit the login form. The login thunk handles success
+  // (token storage) and failure (error state) for us.
+  // -----------------------------------------------------------------
+  const handleLogin = (formData) => {
+    dispatch(login(formData))
   }
 
   return (
@@ -112,7 +134,7 @@ export default function LoginPage() {
           )}
 
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-slate-100 dark:border-gray-800 shadow-card p-6 sm:p-8">
-            <form onSubmit={(e) => { e.preventDefault(); handleSubmit(onSubmit)(e) }} className="space-y-5">
+            <form onSubmit={handleSubmit(handleLogin)} className="space-y-5">
               <Input
                 label="Email Address"
                 type="email"

@@ -1,9 +1,18 @@
+// Succession Plans Page
+//
+// HR/Admin/Manager defines who should take over each key role. Each
+// plan links an Employee (the role-holder) to a Successor (another
+// employee being groomed for that role) with a status.
+
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { format } from 'date-fns'
+
 import { successionsApi } from '../../api/successions'
 import { employeesApi } from '../../api/employees'
+
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import Select from '../../components/common/Select'
@@ -12,74 +21,156 @@ import ConfirmDialog from '../../components/common/ConfirmDialog'
 import StatusBadge from '../../components/common/StatusBadge'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
-import { format } from 'date-fns'
+
+const STATUS_OPTIONS = [
+  { value: 'Planned', label: 'Planned' },
+  { value: 'InProgress', label: 'In Progress' },
+  { value: 'Completed', label: 'Completed' },
+]
 
 export default function SuccessionPlansPage() {
+  // ----- List + dropdown data -----
   const [plans, setPlans] = useState([])
   const [employees, setEmployees] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [editPlan, setEditPlan] = useState(null)
-  const [deleteId, setDeleteId] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm()
+  // ----- Modal state -----
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [planBeingEdited, setPlanBeingEdited] = useState(null)
+  const [planIdToDelete, setPlanIdToDelete] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm()
+
+  // -----------------------------------------------------------------
+  // API call: load succession plans + employees (used in dropdowns).
+  // -----------------------------------------------------------------
+  const fetchPlans = async () => {
+    setIsLoading(true)
     try {
-      const [s, e] = await Promise.all([successionsApi.getAll(), employeesApi.getAll()])
-      setPlans(s)
-      setEmployees(e)
-    } catch { toast.error('Failed to load succession plans') }
-    finally { setLoading(false) }
+      const [plansList, employeesList] = await Promise.all([
+        successionsApi.getAll(),
+        employeesApi.getAll(),
+      ])
+      setPlans(plansList)
+      setEmployees(employeesList)
+    } catch {
+      toast.error('Failed to load succession plans')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  useEffect(() => { load() }, [])
+  // useEffect: load on mount.
   useEffect(() => {
-    if (editPlan) reset({ employeeID: String(editPlan.employeeID), successorID: String(editPlan.successorID), status: editPlan.status })
-    else reset({ status: 'Planned' })
-  }, [editPlan, showCreate, reset])
+    fetchPlans()
+  }, [])
 
-  const onSubmit = async (data) => {
-    setSaving(true)
+  // useEffect: pre-fill form for edit, defaults for create.
+  useEffect(() => {
+    if (planBeingEdited) {
+      reset({
+        employeeID: String(planBeingEdited.employeeID),
+        successorID: String(planBeingEdited.successorID),
+        status: planBeingEdited.status,
+      })
+    } else {
+      reset({ status: 'Planned' })
+    }
+  }, [planBeingEdited, isCreateModalOpen, reset])
+
+  // -----------------------------------------------------------------
+  // Handler: open the create modal.
+  // -----------------------------------------------------------------
+  const handleOpenCreateModal = () => {
+    reset({ status: 'Planned' })
+    setIsCreateModalOpen(true)
+  }
+
+  // -----------------------------------------------------------------
+  // Form submit — handles both create and edit.
+  // Note: only successorID + status can change in edit mode.
+  // -----------------------------------------------------------------
+  const handleFormSubmit = async (formData) => {
+    setIsSaving(true)
     try {
-      if (editPlan) {
-        await successionsApi.update(editPlan.successionID, { successorID: parseInt(data.successorID), status: data.status })
+      if (planBeingEdited) {
+        await successionsApi.update(planBeingEdited.successionID, {
+          successorID: parseInt(formData.successorID),
+          status: formData.status,
+        })
         toast.success('Succession plan updated')
-        setEditPlan(null)
+        setPlanBeingEdited(null)
       } else {
-        await successionsApi.create({ employeeID: parseInt(data.employeeID), successorID: parseInt(data.successorID), status: data.status })
+        await successionsApi.create({
+          employeeID: parseInt(formData.employeeID),
+          successorID: parseInt(formData.successorID),
+          status: formData.status,
+        })
         toast.success('Succession plan created')
-        setShowCreate(false)
+        setIsCreateModalOpen(false)
       }
-      load()
-    } catch { toast.error('Failed to save succession plan') }
-    finally { setSaving(false) }
+      fetchPlans()
+    } catch {
+      toast.error('Failed to save succession plan')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const onDelete = async () => {
-    if (!deleteId) return
-    setDeleting(true)
+  // -----------------------------------------------------------------
+  // Handler: delete after confirmation.
+  // -----------------------------------------------------------------
+  const handleDelete = async () => {
+    if (!planIdToDelete) return
+
+    setIsDeleting(true)
     try {
-      await successionsApi.remove(deleteId)
+      await successionsApi.remove(planIdToDelete)
       toast.success('Succession plan deleted')
-      setDeleteId(null)
-      load()
-    } catch { toast.error('Failed to delete succession plan') }
-    finally { setDeleting(false) }
+      setPlanIdToDelete(null)
+      fetchPlans()
+    } catch {
+      toast.error('Failed to delete succession plan')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
-  const PlanForm = () => (
+  // Employee dropdown options — used for both "Employee" and "Successor".
+  const employeeOptions = employees.map((employee) => ({
+    value: employee.employeeID,
+    label: employee.name,
+  }))
+
+  // -----------------------------------------------------------------
+  // Reusable form (both modals).
+  // -----------------------------------------------------------------
+  const renderPlanForm = () => (
     <form className="space-y-4">
-      <Select label="Employee (for)" required placeholder="Select employee" error={errors.employeeID?.message}
-        options={employees.map((e) => ({ value: e.employeeID, label: e.name }))}
-        {...register('employeeID', { required: 'Employee is required' })} />
-      <Select label="Successor" required placeholder="Select successor" error={errors.successorID?.message}
-        options={employees.map((e) => ({ value: e.employeeID, label: e.name }))}
-        {...register('successorID', { required: 'Successor is required' })} />
-      <Select label="Status" options={[{value:'Planned',label:'Planned'},{value:'InProgress',label:'In Progress'},{value:'Completed',label:'Completed'}]} {...register('status')} />
+      <Select
+        label="Employee (for)"
+        required
+        placeholder="Select employee"
+        error={errors.employeeID?.message}
+        options={employeeOptions}
+        {...register('employeeID', { required: 'Employee is required' })}
+      />
+      <Select
+        label="Successor"
+        required
+        placeholder="Select successor"
+        error={errors.successorID?.message}
+        options={employeeOptions}
+        {...register('successorID', { required: 'Successor is required' })}
+      />
+      <Select label="Status" options={STATUS_OPTIONS} {...register('status')} />
     </form>
   )
 
@@ -88,14 +179,26 @@ export default function SuccessionPlansPage() {
       <PageHeader
         title="Succession Plans"
         subtitle="Plan leadership continuity and employee succession"
-        actions={<Button leftIcon={<PlusIcon className="h-4 w-4" />} onClick={() => { reset({ status: 'Planned' }); setShowCreate(true) }}>New Plan</Button>}
+        actions={
+          <Button
+            leftIcon={<PlusIcon className="h-4 w-4" />}
+            onClick={handleOpenCreateModal}
+          >
+            New Plan
+          </Button>
+        }
       />
 
       <div className="card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
         ) : plans.length === 0 ? (
-          <EmptyState title="No succession plans" description="Create your first succession plan." />
+          <EmptyState
+            title="No succession plans"
+            description="Create your first succession plan."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -109,16 +212,36 @@ export default function SuccessionPlansPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {plans.map((p) => (
-                  <tr key={p.successionID} className="hover:bg-gray-50">
-                    <td className="table-td font-medium">{p.employeeName ?? `Employee #${p.employeeID}`}</td>
-                    <td className="table-td">{p.successorName ?? `Employee #${p.successorID}`}</td>
-                    <td className="table-td"><StatusBadge status={p.status} /></td>
-                    <td className="table-td text-gray-500 dark:text-slate-400">{format(new Date(p.createdAt), 'MMM d, yyyy')}</td>
+                {plans.map((plan) => (
+                  <tr key={plan.successionID} className="hover:bg-gray-50">
+                    <td className="table-td font-medium">
+                      {plan.employeeName ?? `Employee #${plan.employeeID}`}
+                    </td>
+                    <td className="table-td">
+                      {plan.successorName ?? `Employee #${plan.successorID}`}
+                    </td>
+                    <td className="table-td">
+                      <StatusBadge status={plan.status} />
+                    </td>
+                    <td className="table-td text-gray-500 dark:text-slate-400">
+                      {format(new Date(plan.createdAt), 'MMM d, yyyy')}
+                    </td>
                     <td className="table-td">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditPlan(p)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"><PencilIcon className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(p.successionID)} className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                        <button
+                          onClick={() => setPlanBeingEdited(plan)}
+                          className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-amber-500"
+                          title="Edit"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setPlanIdToDelete(plan.successionID)}
+                          className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500"
+                          title="Delete"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -129,15 +252,51 @@ export default function SuccessionPlansPage() {
         )}
       </div>
 
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Succession Plan"
-        footer={<><Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Create</Button></>}>
-        <PlanForm />
+      {/* Create modal */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="New Succession Plan"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Create
+            </Button>
+          </>
+        }
+      >
+        {renderPlanForm()}
       </Modal>
-      <Modal open={!!editPlan} onClose={() => setEditPlan(null)} title="Edit Succession Plan"
-        footer={<><Button variant="secondary" onClick={() => setEditPlan(null)}>Cancel</Button><Button loading={saving} onClick={handleSubmit(onSubmit)}>Save</Button></>}>
-        <PlanForm />
+
+      {/* Edit modal */}
+      <Modal
+        open={!!planBeingEdited}
+        onClose={() => setPlanBeingEdited(null)}
+        title="Edit Succession Plan"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPlanBeingEdited(null)}>
+              Cancel
+            </Button>
+            <Button loading={isSaving} onClick={handleSubmit(handleFormSubmit)}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        {renderPlanForm()}
       </Modal>
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={onDelete} loading={deleting} title="Delete Succession Plan" />
+
+      <ConfirmDialog
+        open={!!planIdToDelete}
+        onClose={() => setPlanIdToDelete(null)}
+        onConfirm={handleDelete}
+        loading={isDeleting}
+        title="Delete Succession Plan"
+      />
     </div>
   )
 }
