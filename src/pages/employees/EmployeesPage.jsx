@@ -17,7 +17,7 @@ import { format } from 'date-fns'
 import { employeesApi } from '../../api/employees'
 import { usersApi } from '../../api/users'
 import { usePermissions } from '../../hooks/usePermissions'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'

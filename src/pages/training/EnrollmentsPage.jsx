@@ -20,7 +20,7 @@ import { format } from 'date-fns'
 import { enrollmentsApi } from '../../api/enrollments'
 import { trainingsApi } from '../../api/trainings'
 import { employeesApi } from '../../api/employees'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 import { usePermissions } from '../../hooks/usePermissions'
 
 import PageHeader from '../../components/common/PageHeader'

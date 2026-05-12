@@ -1,4 +1,4 @@
-import { useAuth } from './useAuth'
+import { useAuth } from '../contexts/AuthContext'
 import { PERMISSIONS, hasRole } from '../config/roles'
 
 export const usePermissions = () => {

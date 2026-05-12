@@ -16,7 +16,7 @@ import {
 import { format } from 'date-fns'
 
 import { resumesApi } from '../../api/resumes'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'

@@ -24,9 +24,7 @@ import {
   ArrowLeftOnRectangleIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
-import { useAppDispatch } from '../../store'
-import { logout } from '../../store/slices/authSlice'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 import { NAV_ITEMS } from '../../config/navigation'
 import clsx from 'clsx'
 
@@ -89,8 +87,7 @@ function getInitials(name) {
 }
 
 export default function Sidebar({ open, onClose }) {
-  const { user } = useAuth()
-  const dispatch = useAppDispatch()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const visibleItems = NAV_ITEMS.filter((item) =>
@@ -105,7 +102,7 @@ export default function Sidebar({ open, onClose }) {
   }, {})
 
   const handleLogout = () => {
-    dispatch(logout())
+    logout()
     navigate('/login')
   }
 

@@ -8,18 +8,15 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 
-import { useAppDispatch } from '../../store'
-import { login, clearError } from '../../store/slices/authSlice'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 
 export default function LoginPage() {
-  const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, isLoading, error } = useAuth()
+  const { isAuthenticated, isLoading, error, login, clearError } = useAuth()
 
   // If the user landed here from a protected route, that route is
   // stored in location.state.from. Otherwise default to the dashboard.
@@ -40,16 +37,12 @@ export default function LoginPage() {
       navigate(redirectTo, { replace: true })
     }
     return () => {
-      dispatch(clearError())
+      clearError()
     }
-  }, [isAuthenticated, navigate, redirectTo, dispatch])
+  }, [isAuthenticated, navigate, redirectTo, clearError])
 
-  // -----------------------------------------------------------------
-  // Handler: submit the login form. The login thunk handles success
-  // (token storage) and failure (error state) for us.
-  // -----------------------------------------------------------------
   const handleLogin = (formData) => {
-    dispatch(login(formData))
+    login(formData)
   }
 
   return (

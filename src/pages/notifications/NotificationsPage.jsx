@@ -10,7 +10,7 @@ import { CheckIcon, CheckCircleIcon, BellIcon } from '@heroicons/react/24/outlin
 import { format } from 'date-fns'
 
 import { notificationsApi } from '../../api/notifications'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'

@@ -6,7 +6,7 @@ import {
   MoonIcon,
 } from '@heroicons/react/24/outline'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 import { notificationsApi } from '../../api/notifications'
 import { useTheme } from '../../contexts/ThemeContext'
 

@@ -1,9 +1,9 @@
 // Profile Page
 //
 // Read-only view of the currently logged-in user's account info.
-// Pulls everything from the Redux auth slice via useAuth().
+// Pulls everything from AuthContext via useAuth().
 
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 import PageHeader from '../../components/common/PageHeader'
 
 export default function ProfilePage() {

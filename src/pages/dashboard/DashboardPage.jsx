@@ -24,7 +24,7 @@ import {
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline'
 
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 import { employeesApi } from '../../api/employees'

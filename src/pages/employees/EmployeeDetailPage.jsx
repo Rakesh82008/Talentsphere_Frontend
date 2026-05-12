@@ -18,7 +18,7 @@ import { format } from 'date-fns'
 import { employeesApi } from '../../api/employees'
 import { performanceApi } from '../../api/performance'
 import { careerPlansApi } from '../../api/careerPlans'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import StatusBadge from '../../components/common/StatusBadge'

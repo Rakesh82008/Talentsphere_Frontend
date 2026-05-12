@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from './store'
-import { initializeAuth, refreshToken } from './store/slices/authSlice'
+import { useAuth } from './contexts/AuthContext'
 import { ROLES } from './config/roles'
 
 import ProtectedRoute from './components/guards/ProtectedRoute'
@@ -38,20 +37,19 @@ import ResumePage from './pages/candidate/ResumePage'
 import ProfilePage from './pages/profile/ProfilePage'
 
 export default function App() {
-  const dispatch = useAppDispatch()
-  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated)
+  const { isAuthenticated, initializeAuth, refreshToken } = useAuth()
 
   useEffect(() => {
-    dispatch(initializeAuth())
-  }, [dispatch])
+    initializeAuth()
+  }, [initializeAuth])
 
   // Silently re-issue a fresh JWT with the current DB role on every app load.
   // This ensures role changes made by an admin take effect without requiring the user to re-enter their password.
   useEffect(() => {
     if (isAuthenticated) {
-      dispatch(refreshToken())
+      refreshToken()
     }
-  }, [isAuthenticated, dispatch])
+  }, [isAuthenticated, refreshToken])
 
   return (
     <BrowserRouter>

@@ -14,7 +14,7 @@ import { format } from 'date-fns'
 import { jobsApi } from '../../api/jobs'
 import { applicationsApi } from '../../api/applications'
 import { resumesApi } from '../../api/resumes'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'

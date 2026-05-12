@@ -15,7 +15,7 @@ import { applicationsApi } from '../../api/applications'
 import { screeningsApi } from '../../api/screenings'
 import { interviewsApi } from '../../api/interviews'
 import { selectionsApi } from '../../api/selections'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../contexts/AuthContext'
 
 import PageHeader from '../../components/common/PageHeader'
 import StatusBadge from '../../components/common/StatusBadge'
