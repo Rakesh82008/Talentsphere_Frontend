@@ -94,19 +94,27 @@ export default function InterviewsPage() {
   const fetchInitialData = async () => {
     setIsLoading(true)
     try {
-      const [
-        interviewsResult,
-        applicationsResult,
-        allUsersResult,
-        userRolesResult,
-        screeningsResult,
-      ] = await Promise.allSettled([
-        interviewsApi.getAll(),
-        applicationsApi.getAll({ page: 1, pageSize: 100 }),
-        usersApi.getAll(),
-        usersApi.getUserRoles(),
-        screeningsApi.getAll(),
+      // Everyone with VIEW_INTERVIEWS can fetch the list.
+      // The rest of the calls are only needed by users who can schedule
+      // new interviews (Admin/HR/Recruiter). Managers don't have
+      // permission to hit /users, /user-roles, or /screenings — so we
+      // skip those fetches for them to avoid 403 toasts.
+      const baseRequests = [interviewsApi.getAll()]
+      const scheduleRequests = canManageInterviews
+        ? [
+            applicationsApi.getAll({ page: 1, pageSize: 100 }),
+            usersApi.getAll(),
+            usersApi.getUserRoles(),
+            screeningsApi.getAll(),
+          ]
+        : []
+
+      const results = await Promise.allSettled([
+        ...baseRequests,
+        ...scheduleRequests,
       ])
+
+      const [interviewsResult, applicationsResult, allUsersResult, userRolesResult, screeningsResult] = results
 
       // 1. Interviews list
       if (interviewsResult.status === 'fulfilled') {
@@ -115,14 +123,19 @@ export default function InterviewsPage() {
         setInterviews(list)
       }
 
+      if (!canManageInterviews) {
+        // Managers don't need the scheduling lookups.
+        return
+      }
+
       // 2. Applications — annotate each with `_screeningPassed`
       //    so the schedule modal can filter the dropdown.
-      if (applicationsResult.status === 'fulfilled') {
+      if (applicationsResult?.status === 'fulfilled') {
         const applicationList = applicationsResult.value?.data ?? []
 
         // Build a Set of applicationIDs that have a passing screening.
         const passedScreeningIds = new Set()
-        if (screeningsResult.status === 'fulfilled') {
+        if (screeningsResult?.status === 'fulfilled') {
           const screenings = screeningsResult.value ?? []
           screenings.forEach((screening) => {
             if (screening.result === 'Pass') {
@@ -142,8 +155,8 @@ export default function InterviewsPage() {
       //    We don't have a single "/managers" endpoint, so we join
       //    /users with /user-roles client-side.
       if (
-        allUsersResult.status === 'fulfilled' &&
-        userRolesResult.status === 'fulfilled'
+        allUsersResult?.status === 'fulfilled' &&
+        userRolesResult?.status === 'fulfilled'
       ) {
         const allUsers = allUsersResult.value ?? []
         const userRoles = userRolesResult.value ?? []
@@ -162,7 +175,7 @@ export default function InterviewsPage() {
           managerUserIds.has(user.userID)
         )
         setManagers(managerUsers)
-      } else if (allUsersResult.status === 'fulfilled') {
+      } else if (allUsersResult?.status === 'fulfilled') {
         // Fallback — if roles endpoint failed, show all users.
         setManagers(allUsersResult.value ?? [])
       }
