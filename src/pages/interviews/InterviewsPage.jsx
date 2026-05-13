@@ -287,7 +287,7 @@ export default function InterviewsPage() {
   // -----------------------------------------------------------------
   const eligibleApplicationOptions = applications
     .filter((application) => {
-      const isOpen = ['Submitted', 'Reviewed'].includes(application.status)
+      const isOpen = application.status === 'Accepted'
       if (!isOpen) return false
 
       if (!application._screeningPassed) return false

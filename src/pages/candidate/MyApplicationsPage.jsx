@@ -7,9 +7,18 @@
 
 import { Fragment, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { TrashIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import {
+  TrashIcon,
+  DocumentTextIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  VideoCameraIcon,
+  MapPinIcon,
+  UserIcon,
+  ArrowTopRightOnSquareIcon,
+} from '@heroicons/react/24/outline'
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/solid'
-import { format } from 'date-fns'
+import { format, differenceInCalendarDays, isPast, isToday } from 'date-fns'
 
 import { applicationsApi } from '../../api/applications'
 import { screeningsApi } from '../../api/screenings'
@@ -80,16 +89,12 @@ const getInterviewStep = (interview) => {
   }
 }
 
-const getDecisionStep = (selection, applicationStatus) => {
+const getDecisionStep = (selection) => {
   if (selection) {
     if (selection.decision === 'Selected') {
       return { state: 'passed', detail: 'Hired!' }
     }
     return { state: 'failed', detail: 'Not selected' }
-  }
-
-  if (applicationStatus === 'Accepted') {
-    return { state: 'passed', detail: 'Accepted' }
   }
 
   return { state: 'upcoming', detail: undefined }
@@ -101,7 +106,7 @@ const buildPipelineSteps = (pipeline, applicationStatus) => {
 
   const screening = getScreeningStep(pipeline.screening, applicationStatus)
   const interview = getInterviewStep(firstInterview)
-  const decision = getDecisionStep(pipeline.selection, applicationStatus)
+  const decision = getDecisionStep(pipeline.selection)
 
   return [
     { label: 'Applied', state: 'done', detail: 'Submitted' },
@@ -153,11 +158,173 @@ function StepCircle({ state }) {
   )
 }
 
+const isMeetingLink = (value) =>
+  typeof value === 'string' && /^https?:\/\//i.test(value.trim())
+
+// Build a human-friendly "in 3 days" / "Today" / "Tomorrow" label.
+const getTimeUntilLabel = (interviewDate) => {
+  if (!interviewDate || isNaN(interviewDate.getTime())) return null
+  if (isToday(interviewDate)) return { text: 'Today', tone: 'urgent' }
+  if (isPast(interviewDate)) return { text: 'Past', tone: 'muted' }
+
+  const days = differenceInCalendarDays(interviewDate, new Date())
+  if (days === 1) return { text: 'Tomorrow', tone: 'soon' }
+  if (days <= 7) return { text: `In ${days} days`, tone: 'soon' }
+  return { text: `In ${days} days`, tone: 'normal' }
+}
+
+// Format "14:00" or "14:00:00" into "2:00 PM". Falls back to the raw value.
+const formatTimeOfDay = (timeString) => {
+  if (!timeString) return null
+  const match = String(timeString).match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return timeString
+
+  const hours24 = parseInt(match[1], 10)
+  const minutes = match[2]
+  const period = hours24 >= 12 ? 'PM' : 'AM'
+  const hours12 = ((hours24 + 11) % 12) + 1
+  return `${hours12}:${minutes} ${period}`
+}
+
+function InterviewDetails({ interview }) {
+  if (!interview) return null
+
+  // Don't show details for interviews that are no longer upcoming/active.
+  const hiddenStatuses = ['Cancelled', 'Failed']
+  if (hiddenStatuses.includes(interview.status)) return null
+
+  const interviewDate = interview.date ? new Date(interview.date) : null
+  const hasValidDate = interviewDate && !isNaN(interviewDate.getTime())
+
+  const dayOfWeek = hasValidDate ? format(interviewDate, 'EEE').toUpperCase() : null
+  const dayNumber = hasValidDate ? format(interviewDate, 'd') : null
+  const monthShort = hasValidDate ? format(interviewDate, 'MMM').toUpperCase() : null
+  const fullDate = hasValidDate ? format(interviewDate, 'EEEE, MMMM d, yyyy') : null
+
+  const timeLabel = formatTimeOfDay(interview.time)
+  const timeUntil = getTimeUntilLabel(interviewDate)
+  const isCompleted = interview.status === 'Completed'
+
+  const locationValue = interview.location?.trim() ?? ''
+  const locationIsLink = isMeetingLink(locationValue)
+
+  const toneStyles = {
+    urgent: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 ring-1 ring-rose-200 dark:ring-rose-800',
+    soon: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800',
+    normal: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-800',
+    muted: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-slate-400 ring-1 ring-gray-200 dark:ring-gray-700',
+  }
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-2xl border border-indigo-200 dark:border-indigo-800/60 bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-indigo-950/40 dark:via-gray-900 dark:to-purple-950/30 shadow-sm">
+      {/* Header bar */}
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-indigo-100 dark:border-indigo-900/60 bg-white/60 dark:bg-gray-900/40 backdrop-blur-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
+            <CalendarDaysIcon className="h-4.5 w-4.5 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+              {isCompleted ? 'Interview Completed' : 'Interview Scheduled'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              {isCompleted
+                ? 'Awaiting feedback from your interviewer'
+                : 'Make sure to be ready a few minutes early'}
+            </p>
+          </div>
+        </div>
+
+        {timeUntil && !isCompleted && (
+          <span
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${toneStyles[timeUntil.tone]}`}
+          >
+            {timeUntil.text}
+          </span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="px-5 py-4 flex flex-col sm:flex-row gap-5">
+        {/* Big calendar tile */}
+        {hasValidDate && (
+          <div className="flex-shrink-0 w-20 sm:w-24 rounded-xl overflow-hidden bg-white dark:bg-gray-900 ring-1 ring-indigo-200 dark:ring-indigo-800 shadow-sm">
+            <div className="bg-indigo-600 text-white text-[10px] font-bold tracking-widest text-center py-1">
+              {monthShort}
+            </div>
+            <div className="text-center py-2">
+              <div className="text-3xl font-bold text-gray-900 dark:text-slate-100 leading-none">
+                {dayNumber}
+              </div>
+              <div className="text-[10px] font-semibold tracking-wider text-gray-500 dark:text-slate-400 mt-1">
+                {dayOfWeek}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Details column */}
+        <div className="flex-1 min-w-0 space-y-2.5 text-sm">
+          {fullDate && (
+            <div className="flex items-start gap-2 text-gray-700 dark:text-slate-300">
+              <CalendarDaysIcon className="h-4 w-4 flex-shrink-0 mt-0.5 text-indigo-500 dark:text-indigo-400" />
+              <span className="font-medium">{fullDate}</span>
+            </div>
+          )}
+
+          {timeLabel && (
+            <div className="flex items-start gap-2 text-gray-700 dark:text-slate-300">
+              <ClockIcon className="h-4 w-4 flex-shrink-0 mt-0.5 text-indigo-500 dark:text-indigo-400" />
+              <span className="font-medium">{timeLabel}</span>
+            </div>
+          )}
+
+          {interview.interviewerName && (
+            <div className="flex items-start gap-2 text-gray-700 dark:text-slate-300">
+              <UserIcon className="h-4 w-4 flex-shrink-0 mt-0.5 text-indigo-500 dark:text-indigo-400" />
+              <span>
+                with{' '}
+                <span className="font-medium text-gray-900 dark:text-slate-100">
+                  {interview.interviewerName}
+                </span>
+              </span>
+            </div>
+          )}
+
+          {locationValue && !locationIsLink && (
+            <div className="flex items-start gap-2 text-gray-700 dark:text-slate-300">
+              <MapPinIcon className="h-4 w-4 flex-shrink-0 mt-0.5 text-indigo-500 dark:text-indigo-400" />
+              <span className="break-words">{locationValue}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer CTA */}
+      {locationValue && locationIsLink && !isCompleted && (
+        <div className="px-5 pb-4">
+          <a
+            href={locationValue}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold shadow-sm shadow-indigo-600/20 transition-colors"
+          >
+            <VideoCameraIcon className="h-4 w-4" />
+            Join Video Meeting
+            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+          </a>
+          <p className="mt-2 text-xs text-gray-500 dark:text-slate-400 break-all">
+            Link: {locationValue}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PipelineTracker({ pipeline, applicationStatus }) {
   const steps = buildPipelineSteps(pipeline, applicationStatus)
-  const isHired =
-    applicationStatus === 'Accepted' ||
-    pipeline.selection?.decision === 'Selected'
+  const isHired = pipeline.selection?.decision === 'Selected'
   const isRejected =
     applicationStatus === 'Rejected' && !pipeline.selection
 
@@ -203,6 +370,9 @@ function PipelineTracker({ pipeline, applicationStatus }) {
           )
         })}
       </div>
+
+      {/* Upcoming interview details (date, time, link/location) */}
+      <InterviewDetails interview={pipeline.interviews[0] ?? null} />
 
       {/* Banner shown when the application was rejected outright */}
       {isRejected && (

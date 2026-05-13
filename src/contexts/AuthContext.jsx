@@ -125,6 +125,8 @@ export function AuthProvider({ children }) {
   const hasRole = useCallback(
     (...roles) => roles.some((r) => user?.roles.includes(r)),
     [user]
+
+    
   )
 
   const value = {

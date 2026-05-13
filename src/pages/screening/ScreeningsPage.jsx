@@ -172,9 +172,7 @@ export default function ScreeningsPage() {
   // -----------------------------------------------------------------
   const eligibleApplicationOptions = applications
     .filter((application) => {
-      const hasEligibleStatus = ['Submitted', 'Reviewed'].includes(
-        application.status
-      )
+      const hasEligibleStatus = application.status === 'Accepted'
       if (!hasEligibleStatus) return false
 
       const alreadyScreened = screenings.some(
