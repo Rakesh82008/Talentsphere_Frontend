@@ -65,6 +65,10 @@ const DEFAULT_FORM_VALUES = {
   status: 'Planned',
 }
 
+// Today's date in YYYY-MM-DD format — used as the `min` for date inputs
+// so users can only pick today or a future date.
+const TODAY = new Date().toISOString().slice(0, 10)
+
 // Find the human-readable label for a delivery mode code.
 const getDeliveryModeLabel = (mode) => {
   const match = DELIVERY_MODE_OPTIONS.find((option) => option.value === mode)
@@ -152,7 +156,6 @@ export default function TrainingsPage() {
         instructorName: trainingBeingEdited.instructorName ?? '',
         classStartTime: trainingBeingEdited.classStartTime ?? '',
         classEndTime: trainingBeingEdited.classEndTime ?? '',
-        maxCapacity: trainingBeingEdited.maxCapacity?.toString() ?? '',
         // Server returns ISO dates; the <input type="date"> needs YYYY-MM-DD.
         startDate: trainingBeingEdited.startDate?.split('T')[0],
         endDate: trainingBeingEdited.endDate?.split('T')[0],
@@ -178,14 +181,7 @@ export default function TrainingsPage() {
   const handleFormSubmit = async (formData) => {
     setIsSaving(true)
     try {
-      // maxCapacity comes in as a string from the input; convert to int
-      // or leave as undefined if the user left it blank.
-      const payload = {
-        ...formData,
-        maxCapacity: formData.maxCapacity
-          ? parseInt(formData.maxCapacity)
-          : undefined,
-      }
+      const payload = { ...formData }
 
       if (trainingBeingEdited) {
         await trainingsApi.update(trainingBeingEdited.trainingID, payload)
@@ -338,10 +334,11 @@ export default function TrainingsPage() {
         <Input label="Class End Time" type="time" {...register('classEndTime')} />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Input
           label="Start Date"
           type="date"
+          min={TODAY}
           required
           error={errors.startDate?.message}
           {...register('startDate', { required: 'Start date is required' })}
@@ -349,15 +346,10 @@ export default function TrainingsPage() {
         <Input
           label="End Date"
           type="date"
+          min={TODAY}
           required
           error={errors.endDate?.message}
           {...register('endDate', { required: 'End date is required' })}
-        />
-        <Input
-          label="Max Capacity"
-          type="number"
-          placeholder="Leave blank for unlimited"
-          {...register('maxCapacity')}
         />
       </div>
 

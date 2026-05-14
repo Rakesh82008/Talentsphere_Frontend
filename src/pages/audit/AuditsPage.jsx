@@ -28,6 +28,10 @@ const STATUS_OPTIONS = [
   { value: 'Archived', label: 'Archived' },
 ]
 
+// Today's date in YYYY-MM-DD format — used as the `min` for date inputs
+// so users can only pick today or a future date.
+const TODAY = new Date().toISOString().slice(0, 10)
+
 // Today's date in YYYY-MM-DD — used as the default for new audits.
 const getTodayDateString = () => new Date().toISOString().split('T')[0]
 
@@ -153,6 +157,7 @@ export default function AuditsPage() {
       <Input
         label="Audit Date"
         type="date"
+        min={TODAY}
         required
         error={errors.auditDate?.message}
         {...register('auditDate', { required: 'Date is required' })}

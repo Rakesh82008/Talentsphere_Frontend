@@ -34,6 +34,10 @@ const RATING_OPTIONS = [1, 2, 3, 4, 5].map((number) => ({
   label: `${number} Star${number > 1 ? 's' : ''}`,
 }))
 
+// Today's date in YYYY-MM-DD format — used as the `min` for date inputs
+// so users can only pick today or a future date.
+const TODAY = new Date().toISOString().slice(0, 10)
+
 // -------------------------------------------------------------------
 // Small presentational component: ★★★★☆ rating display.
 // -------------------------------------------------------------------
@@ -338,6 +342,7 @@ export default function PerformanceReviewsPage() {
           <Input
             label="Review Date"
             type="date"
+            min={TODAY}
             required
             error={errors.reviewDate?.message}
             {...register('reviewDate', { required: 'Date is required' })}
@@ -373,6 +378,7 @@ export default function PerformanceReviewsPage() {
           <Input
             label="Review Date"
             type="date"
+            min={TODAY}
             required
             error={errors.reviewDate?.message}
             {...register('reviewDate', { required: 'Date is required' })}

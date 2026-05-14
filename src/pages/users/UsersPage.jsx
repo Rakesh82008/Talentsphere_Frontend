@@ -11,6 +11,7 @@ import { PencilIcon, TrashIcon, KeyIcon } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 
 import { usersApi } from '../../api/users'
+import { useAuth } from '../../contexts/AuthContext'
 
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
@@ -30,6 +31,10 @@ const STATUS_OPTIONS = [
 ]
 
 export default function UsersPage() {
+  // Current logged-in admin — used to hide their own row from the list
+  // so they cannot edit, change role, or delete themselves.
+  const { user: currentUser } = useAuth()
+
   // ----- List data -----
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
@@ -180,13 +185,16 @@ export default function UsersPage() {
   }
 
   // Filter users by the search box (matches name or email).
-  const filteredUsers = users.filter((u) => {
-    const lowerSearch = searchText.toLowerCase()
-    return (
-      u.name.toLowerCase().includes(lowerSearch) ||
-      u.email.toLowerCase().includes(lowerSearch)
-    )
-  })
+  // Also hide the currently logged-in admin so they cannot act on themselves.
+  const filteredUsers = users
+    .filter((u) => u.userID !== currentUser?.userId)
+    .filter((u) => {
+      const lowerSearch = searchText.toLowerCase()
+      return (
+        u.name.toLowerCase().includes(lowerSearch) ||
+        u.email.toLowerCase().includes(lowerSearch)
+      )
+    })
 
   // Role dropdown options.
   const roleOptions = roles.map((role) => ({

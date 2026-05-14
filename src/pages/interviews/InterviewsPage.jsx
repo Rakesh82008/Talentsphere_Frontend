@@ -50,6 +50,10 @@ const NEXT_STATUSES_BY_CURRENT = {
   Cancelled: [],
 }
 
+// Today's date in YYYY-MM-DD format — used as the `min` for date inputs
+// so users can only pick today or a future date.
+const TODAY = new Date().toISOString().slice(0, 10)
+
 export default function InterviewsPage() {
   const { can } = usePermissions()
   const canManageInterviews = can('MANAGE_INTERVIEWS')
@@ -465,6 +469,7 @@ export default function InterviewsPage() {
             <Input
               label="Date"
               type="date"
+              min={TODAY}
               required
               error={scheduleErrors.date?.message}
               {...registerScheduleField('date', { required: 'Date is required' })}
